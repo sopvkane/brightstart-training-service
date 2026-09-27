@@ -11,3 +11,6 @@ frontend/public/application.css
 frontend/public/application.css.map
 
 api/target/
+
+playwright-report/
+test-results/

@@ -118,6 +118,68 @@ Run just the Java address tests from the `api` folder:
 ./mvnw -Dtest=AddressControllerTest test
 ```
 
+## Browser journey tests
+
+The Playwright tests control a real Chromium browser. They check a small number of complete user
+journeys through the frontend and Java API together. This is slower than a focused frontend or API
+test, so browser tests complement those tests rather than replacing them.
+
+Install the test browser once after running `npm ci`:
+
+```bash
+npm run install:browser
+```
+
+Playwright starts both applications automatically. You do not need to start the frontend or API in
+separate terminals before running:
+
+```bash
+npm run test:browser
+```
+
+This runs Chromium without opening a visible window. Use this mode for a quick complete check and
+in continuous integration.
+
+### Watch the tests use the service
+
+Run the browser visibly and watch each journey happen:
+
+```bash
+npm run test:browser:headed
+```
+
+The tests use one worker, so the journeys run one after another instead of opening several browser
+windows at once.
+
+For an interactive view, run:
+
+```bash
+npm run test:browser:ui
+```
+
+Playwright UI mode lets you select one test, run it again and inspect each action. Close the UI when
+you finish; Playwright will stop the applications it started.
+
+The browser tests live in `browser-tests/address-journey.spec.ts`. They use labels and roles such as
+`getByLabel` and `getByRole`, matching how a user or assistive technology finds controls. Avoid
+replacing these with CSS selectors tied to the page's visual styling.
+
+### Investigate a browser-test failure
+
+Start with the first failed action and compare it with what you can see in the page. Playwright
+saves a screenshot and trace for a failure. The trace records browser actions, page snapshots and
+network requests.
+
+Open the HTML report locally with:
+
+```bash
+npm run test:browser:report
+```
+
+In GitHub Actions, the **Browser journey** job uploads its Playwright report after a failure. Open
+the failed workflow run and download the `playwright-report` artifact. An **artifact** is a file
+saved by a workflow so that you can investigate it after the job has finished.
+
 ## Interpret a failure
 
 Start with the failing test name and the first assertion error:
@@ -144,6 +206,7 @@ From the repository root:
 | ------------------------ | ------------------------------------------------------------------------------------------------ |
 | `npm run format:check`   | Consistent formatting in supported code, documentation and workflow files                        |
 | `npm run check:frontend` | ESLint, strict TypeScript checking, Vitest, Sass compilation and the production TypeScript build |
+| `npm run test:browser`   | Complete user journeys through a real browser, the frontend and the Java API                     |
 
 ESLint finds likely TypeScript mistakes. Type checking checks that values are used in ways their
 declared types allow. A production build confirms that the frontend can be compiled into the files

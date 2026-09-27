@@ -100,6 +100,14 @@ cd api
 cd ..
 ```
 
+For changes to the service journey, run the browser tests as well. The first run needs the Chromium
+test browser installed:
+
+```bash
+npm run install:browser
+npm run test:browser
+```
+
 Broader verification checks more than the one behaviour you changed. Update documentation when a
 learner-facing command or behaviour changes.
 
@@ -172,7 +180,7 @@ ticket number after `#` unless it is also the issue number.
 GitHub. A CI **job** groups related work, and each named **step** runs one action or command. The
 commands are defined in files under `.github/workflows`:
 
-- `ci.yml` runs the same frontend and API checks used locally;
+- `ci.yml` runs the same frontend, API and browser-journey checks used locally;
 - `dependency-review.yml` checks whether a pull request introduces a known vulnerable dependency;
   and
 - `codeql.yml` examines JavaScript, TypeScript and Java for recognised security problems.

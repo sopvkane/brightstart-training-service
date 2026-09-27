@@ -120,6 +120,25 @@ ADDRESS_API_BASE_URL=http://localhost:8081 npm run dev:frontend
 Use the environment-variable syntax for your shell if you are using Windows. Do not change the
 application's default merely to work around an API process that has stopped.
 
+## Browser tests cannot find Chromium
+
+Playwright needs its own known browser version. Installing the Node.js dependencies does not
+download that browser. From the repository root, run:
+
+```bash
+npm run install:browser
+```
+
+Then run `npm run test:browser` again. Do not change the test to use an unrelated browser already
+installed on the laptop; using Playwright's expected Chromium version keeps local and CI results
+consistent.
+
+## Browser tests say a web server is already running
+
+Browser tests start the frontend and Java API automatically, and normally reuse applications that
+you already started locally. If the process on port 3000 or 8080 is not this training service, stop
+it before rerunning the test. The port troubleshooting below explains how the two ports are used.
+
 ## Port 3000 or 8080 is already in use
 
 A **port** is the local number identifying which running process should receive a request. This

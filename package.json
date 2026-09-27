@@ -16,11 +16,17 @@
     "dev:frontend": "npm run dev --workspace @brightstart/training-frontend",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "install:browser": "playwright install chromium",
     "lint:frontend": "npm run lint --workspace @brightstart/training-frontend",
+    "test:browser": "playwright test",
+    "test:browser:headed": "playwright test --headed --workers=1",
+    "test:browser:report": "playwright show-report",
+    "test:browser:ui": "playwright test --ui",
     "test:frontend": "npm run test --workspace @brightstart/training-frontend",
     "typecheck:frontend": "npm run typecheck --workspace @brightstart/training-frontend"
   },
   "devDependencies": {
+    "@playwright/test": "1.63.0",
     "prettier": "3.9.9"
   }
 }
