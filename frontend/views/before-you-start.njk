@@ -1,0 +1,20 @@
+{% extends "layout.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+
+{% block content %}
+  {{ govukBackLink({
+    text: "Back",
+    href: "/"
+  }) }}
+
+  <h1 class="govuk-heading-xl">Before you start</h1>
+  <p class="govuk-body">During this journey, you may be asked for information such as:</p>
+  <ul class="govuk-list govuk-list--bullet">
+    <li>your address</li>
+    <li>which identity document you have</li>
+    <li>an image of a document</li>
+  </ul>
+  <p class="govuk-body">
+    This is a fictional training service. Do not enter real personal information.
+  </p>
+{% endblock %}

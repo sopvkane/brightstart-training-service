@@ -12,10 +12,12 @@ sends an HTTP response back.
 Run the applications using the [README](../README.md), then try these requests:
 
 - <http://localhost:3000> requests the frontend home page.
+- <http://localhost:3000/before-you-start> requests the next page in the service journey.
 - <http://localhost:8080/api/health> requests the API health response.
 
-These requests use the HTTP method `GET`, which asks an application for information. `/` and
-`/api/health` are **paths**: the parts of the URL that identify the requested behaviour.
+These requests use the HTTP method `GET`, which asks an application for information. `/`,
+`/before-you-start` and `/api/health` are **paths**: the parts of the URL that identify the requested
+behaviour.
 
 Before reading every file, choose one request and follow only the code involved in it.
 
@@ -29,11 +31,18 @@ frontend/
 ├── src/
 │   ├── server.ts              starts the HTTP server
 │   ├── app.ts                 configures the frontend application
-│   └── routes/home.ts         handles GET /
+│   └── routes/
+│       ├── home.ts            handles GET /
+│       └── before-you-start.ts
+│                              handles GET /before-you-start
 ├── views/
 │   ├── layout.njk             shared HTML page structure
-│   └── home.njk               home page content
-└── test/home.test.ts          checks the home page over HTTP
+│   ├── home.njk               start page content
+│   └── before-you-start.njk   Before you start page content
+└── test/
+    ├── home.test.ts           checks the start page over HTTP
+    └── before-you-start.test.ts
+                               checks the Before you start page over HTTP
 
 api/src/
 ├── main/java/com/example/brightstart/training/
@@ -45,23 +54,28 @@ api/src/
     └── HealthControllerTest.java         checks the health response
 ```
 
-## Follow the frontend home-page request
+## Follow a frontend request
 
 A **framework** is reusable code that provides some of the structure and common behaviour needed to
 build an application. Express is the Node.js web framework used by the frontend. A **route**
 connects an HTTP method and path to a **handler**, the function that runs when the route matches a
 request.
 
-For `GET /`:
+For either frontend page:
 
 1. `server.ts` starts the Express application created by `app.ts`.
-2. `app.ts` configures Express, Nunjucks, static assets and registers the home route. Static assets
+2. `app.ts` configures Express, Nunjucks and static assets, then registers both routes. Static assets
    are files such as CSS and images that the application sends without generating them dynamically.
-3. `routes/home.ts` contains the matching route and its handler.
-4. The handler asks Nunjucks to render `home.njk`. **Render** means combine a template with its data
-   to produce the final HTML.
-5. `home.njk` supplies the page content and extends `layout.njk`, the shared page structure.
+3. Express selects the route whose path matches the request.
+4. The route's handler asks Nunjucks to render the corresponding template. **Render** means combine
+   a template with its data to produce the final HTML.
+5. The page template supplies the content and extends `layout.njk`, the shared page structure.
 6. Express sends the resulting HTML response to the browser.
+
+| Request                 | Route                        | Template               |
+| ----------------------- | ---------------------------- | ---------------------- |
+| `GET /`                 | `routes/home.ts`             | `home.njk`             |
+| `GET /before-you-start` | `routes/before-you-start.ts` | `before-you-start.njk` |
 
 Nunjucks is a templating system. Its templates contain HTML plus instructions for inserting content
 and reusing shared layouts.
@@ -69,8 +83,8 @@ and reusing shared layouts.
 ### Pause or record the request
 
 A **breakpoint** tells a debugger to pause when a line runs so you can inspect the current values.
-If your editor's Node.js debugger is configured, place one inside the handler in `routes/home.ts`,
-then refresh the page.
+If your editor's Node.js debugger is configured, place one inside the handler for the page you are
+investigating, then refresh the page.
 
 You can also add a temporary `console.log` inside the handler. Refresh the page and look in the
 terminal running the frontend. Remove temporary diagnostic output before committing unless it has a
@@ -116,9 +130,10 @@ supported Sass and Nunjucks APIs with generic, non-GOV.UK branding:
 - Sass uses its Node package importer to load GOV.UK Frontend and apply the service's font and colour
   choices.
 - Service-owned static assets live in `frontend/public` and are available under `/assets`.
-
-The current page does not use an interactive GOV.UK Frontend component, so the application does not
-serve the library's browser JavaScript.
+- The Start now link uses the GOV.UK Frontend button component. `app.ts` makes the library's browser
+  JavaScript and source map available at two specific `/assets/govuk` paths, and `layout.njk`
+  initialises it. This provides the component's expected keyboard behaviour without exposing the
+  rest of the installed package as static files.
 
 ## When the behaviour is unclear
 
