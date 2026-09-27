@@ -6,6 +6,7 @@ import session from 'express-session';
 import nunjucks from 'nunjucks';
 
 import { createAddressLookupClient, type AddressLookupClient } from './address-api-client.js';
+import { addCsrfTokenToViews, protectAgainstCsrf } from './csrf-protection.js';
 import { createAddressRouter } from './routes/address.js';
 import { beforeYouStartRouter } from './routes/before-you-start.js';
 import { homeRouter } from './routes/home.js';
@@ -83,6 +84,9 @@ export function createApplication(options: ApplicationOptions = {}): Express {
       path.join(govukFrontendDistributionDirectory, 'govuk', 'govuk-frontend.min.js.map'),
     );
   });
+
+  application.use(protectAgainstCsrf);
+  application.use(addCsrfTokenToViews);
 
   application.use('/', homeRouter);
   application.use('/before-you-start', beforeYouStartRouter);

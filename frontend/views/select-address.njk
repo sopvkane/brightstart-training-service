@@ -19,6 +19,8 @@
 
   {% if addresses.length %}
     <form method="post" action="/select-address" novalidate>
+      <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+
       {{ govukRadios({
         name: "addressId",
         idPrefix: "addressId",

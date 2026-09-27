@@ -50,12 +50,14 @@ frontend/
 │   ├── server.ts                 starts the HTTP server
 │   ├── app.ts                    configures the frontend and its dependencies
 │   ├── address-api-client.ts     calls and checks the Java address API
+│   ├── csrf-protection.ts        protects forms from forged submissions
 │   ├── routes/address.ts         handles postcode and address-selection requests
 │   └── types/express-session.d.ts describes journey state stored in the session
 ├── views/
 │   ├── address.njk               postcode form
 │   ├── select-address.njk        results, selection and validation
 │   ├── address-lookup-error.njk  unavailable-service message
+│   ├── form-expired.njk          rejected-form message
 │   └── address-confirmed.njk     selected-address confirmation
 └── test/
     ├── address.test.ts            checks the browser journey over HTTP
@@ -98,6 +100,11 @@ A `.ts` file is TypeScript, `.njk` is a Nunjucks template and `.java` is Java.
 A **session** is state kept on the server for one browser journey. `express-session` gives the
 browser a cookie containing a session identifier; the postcode and address remain in frontend
 memory. Restarting the frontend clears them because this training service has no database.
+
+Each form also contains a hidden **cross-site request forgery (CSRF) token**. The frontend stores a
+matching token in the session and checks it before accepting a form submission. Another website
+cannot read this token, so it cannot silently submit the form using the learner's session. A
+missing or incorrect token receives a `403 Forbidden` response without running the form route.
 
 The redirects use the POST/Redirect/GET pattern. Refreshing the result page repeats only the final
 `GET`, rather than submitting the form again.
