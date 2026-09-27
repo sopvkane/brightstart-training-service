@@ -45,29 +45,37 @@ From the repository root, run all frontend tests:
 npm run test:frontend
 ```
 
-The home-page tests use Supertest, a library for sending HTTP requests to a Node.js application
+The frontend tests use Supertest, a library for sending HTTP requests to a Node.js application
 during a test. The requests pass through the configured Express application, so the tests exercise
-the route and templates together.
+the routes and templates together.
 
-They prove that the home page responds successfully with HTML, communicates its purpose and provides
-important accessible page structure. They assert what a browser receives rather than inspecting
-private Express details.
+They prove that pages respond successfully, forms validate submitted values, redirects go to the
+expected location and stored journey state appears on a later page. They assert what a browser
+receives rather than inspecting private Express or session details.
+
+The postcode test uses a Supertest **agent**, which keeps cookies between requests like one browser
+would. This lets the test submit a postcode and then request the confirmation page with the same
+session. The setup remains visible in the test:
+
+```typescript
+const browser = request.agent(application);
+```
 
 ### Run a focused frontend test
 
 The frontend is an npm **workspace**: a project with its own `package.json` that is managed through
 the repository's root npm installation.
 
-Run only the home-page test file with:
+Run only the postcode test file with:
 
 ```bash
-npm test --workspace @brightstart/training-frontend -- test/home.test.ts
+npm test --workspace @brightstart/training-frontend -- test/address.test.ts
 ```
 
 Run one named behaviour with:
 
 ```bash
-npm test --workspace @brightstart/training-frontend -- -t "explains the service purpose"
+npm test --workspace @brightstart/training-frontend -- -t "normalises and stores the postcode"
 ```
 
 The `-t` option selects tests whose names match the text that follows it.

@@ -13,11 +13,12 @@ Run the applications using the [README](../README.md), then try these requests:
 
 - <http://localhost:3000> requests the frontend home page.
 - <http://localhost:3000/before-you-start> requests the next page in the service journey.
+- <http://localhost:3000/address> requests the postcode-entry page.
 - <http://localhost:8080/api/health> requests the API health response.
 
 These requests use the HTTP method `GET`, which asks an application for information. `/`,
-`/before-you-start` and `/api/health` are **paths**: the parts of the URL that identify the requested
-behaviour.
+`/before-you-start`, `/address` and `/api/health` are **paths**: the parts of the URL that identify
+the requested behaviour.
 
 Before reading every file, choose one request and follow only the code involved in it.
 
@@ -31,18 +32,22 @@ frontend/
 ├── src/
 │   ├── server.ts              starts the HTTP server
 │   ├── app.ts                 configures the frontend application
-│   └── routes/
-│       ├── home.ts            handles GET /
-│       └── before-you-start.ts
-│                              handles GET /before-you-start
+│   ├── routes/
+│   │   ├── home.ts            handles GET /
+│   │   ├── before-you-start.ts handles GET /before-you-start
+│   │   └── address.ts         handles the postcode routes
+│   └── types/
+│       └── express-session.d.ts describes the stored session data
 ├── views/
 │   ├── layout.njk             shared HTML page structure
 │   ├── home.njk               start page content
-│   └── before-you-start.njk   Before you start page content
+│   ├── before-you-start.njk   Before you start page content
+│   ├── address.njk            postcode form and validation errors
+│   └── address-confirmed.njk  temporary confirmation page
 └── test/
     ├── home.test.ts           checks the start page over HTTP
-    └── before-you-start.test.ts
-                               checks the Before you start page over HTTP
+    ├── before-you-start.test.ts checks the Before you start page over HTTP
+    └── address.test.ts        checks postcode entry and stored state
 
 api/src/
 ├── main/java/com/example/brightstart/training/
@@ -61,24 +66,60 @@ build an application. Express is the Node.js web framework used by the frontend.
 connects an HTTP method and path to a **handler**, the function that runs when the route matches a
 request.
 
-For either frontend page:
+For a frontend page:
 
 1. `server.ts` starts the Express application created by `app.ts`.
-2. `app.ts` configures Express, Nunjucks and static assets, then registers both routes. Static assets
-   are files such as CSS and images that the application sends without generating them dynamically.
+2. `app.ts` configures Express, Nunjucks, sessions and static assets, then registers the routes.
+   Static assets are files such as CSS and images that the application sends without generating
+   them dynamically.
 3. Express selects the route whose path matches the request.
 4. The route's handler asks Nunjucks to render the corresponding template. **Render** means combine
    a template with its data to produce the final HTML.
 5. The page template supplies the content and extends `layout.njk`, the shared page structure.
 6. Express sends the resulting HTML response to the browser.
 
-| Request                 | Route                        | Template               |
-| ----------------------- | ---------------------------- | ---------------------- |
-| `GET /`                 | `routes/home.ts`             | `home.njk`             |
-| `GET /before-you-start` | `routes/before-you-start.ts` | `before-you-start.njk` |
+| Request                  | Route                        | Template                                        |
+| ------------------------ | ---------------------------- | ----------------------------------------------- |
+| `GET /`                  | `routes/home.ts`             | `home.njk`                                      |
+| `GET /before-you-start`  | `routes/before-you-start.ts` | `before-you-start.njk`                          |
+| `GET /address`           | `routes/address.ts`          | `address.njk`                                   |
+| `POST /address`          | `routes/address.ts`          | Redirect or `address.njk` when validation fails |
+| `GET /address-confirmed` | `routes/address.ts`          | `address-confirmed.njk`                         |
 
 Nunjucks is a templating system. Its templates contain HTML plus instructions for inserting content
 and reusing shared layouts.
+
+## Follow a postcode submission
+
+An HTML **form** sends values entered by the user to an application. The postcode form uses the
+HTTP method `POST`, which sends the form data to `POST /address` for processing.
+
+```text
+GET /address
+    ↓
+postcode form
+    ↓ POST /address
+trim spaces and convert letters to uppercase
+    ↓
+store postcode in the session
+    ↓ 303 redirect
+GET /address-confirmed
+    ↓
+display the stored postcode
+```
+
+A **session** is server-side state kept for one browser journey. `express-session` stores the
+postcode in the frontend's memory and gives the browser a cookie containing only the session
+identifier. A cookie is a small value that the browser returns with later requests. This training
+service does not store the postcode in a database, so restarting the frontend clears it.
+
+If the postcode is empty, the handler renders `address.njk` again with a `400` response, an error
+summary and an error attached to the input. If it is present, the handler normalises and stores it,
+then sends a `303` **redirect**. A redirect tells the browser to make a new request to another URL.
+
+This produces the POST/Redirect/GET pattern: the browser submits once with `POST`, then displays the
+result using `GET`. Refreshing the confirmation page repeats only the final `GET`, not the form
+submission.
 
 ### Pause or record the request
 

@@ -1,0 +1,44 @@
+{% extends "layout.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/input/macro.njk" import govukInput %}
+
+{% block content %}
+  {{ govukBackLink({
+    text: "Back",
+    href: "/before-you-start"
+  }) }}
+
+  {% if errors %}
+    {{ govukErrorSummary({
+      titleText: "There is a problem",
+      errorList: errors
+    }) }}
+  {% endif %}
+
+  <form method="post" action="/address" novalidate>
+    {{ govukInput({
+      label: {
+        text: "What is your postcode?",
+        classes: "govuk-label--l",
+        isPageHeading: true
+      },
+      hint: {
+        text: "We need your postcode so you can choose your address later."
+      },
+      id: "postcode",
+      name: "postcode",
+      value: postcode,
+      autocomplete: "postal-code",
+      spellcheck: false,
+      errorMessage: {
+        text: postcodeError
+      } if postcodeError
+    }) }}
+
+    {{ govukButton({
+      text: "Continue"
+    }) }}
+  </form>
+{% endblock %}
