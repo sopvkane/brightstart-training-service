@@ -32,4 +32,12 @@ describe('GET /before-you-start', () => {
 
     expect(response.text).toMatch(/<a[^>]+href="\/"[^>]*>\s*Back\s*<\/a>/);
   });
+
+  it('links to the postcode page', async () => {
+    const application = createApplication();
+
+    const response = await request(application).get('/before-you-start');
+
+    expect(response.text).toMatch(/<a[^>]+href="\/address"[^>]*>[\s\S]*?Continue[\s\S]*?<\/a>/);
+  });
 });

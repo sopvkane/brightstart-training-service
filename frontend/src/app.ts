@@ -2,8 +2,10 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 
 import express, { type Express } from 'express';
+import session from 'express-session';
 import nunjucks from 'nunjucks';
 
+import { addressRouter } from './routes/address.js';
 import { beforeYouStartRouter } from './routes/before-you-start.js';
 import { homeRouter } from './routes/home.js';
 
@@ -17,12 +19,39 @@ function resolveGovukFrontendDistributionDirectory(): string {
   return path.join(path.dirname(packageJson), 'dist');
 }
 
+function getSessionSecret(): string {
+  const configuredSecret = process.env.SESSION_SECRET;
+
+  if (configuredSecret !== undefined && configuredSecret.length > 0) {
+    return configuredSecret;
+  }
+
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('SESSION_SECRET must be set when NODE_ENV is production.');
+  }
+
+  return 'brightstart-training-service-local-development-only';
+}
+
 export function createApplication(): Express {
   const application = express();
   const frontendDirectory = path.resolve(import.meta.dirname, '..');
   const govukFrontendDistributionDirectory = resolveGovukFrontendDistributionDirectory();
 
   application.disable('x-powered-by');
+
+  application.use(express.urlencoded({ extended: false }));
+  application.use(
+    session({
+      secret: getSessionSecret(),
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        httpOnly: true,
+        sameSite: 'lax',
+      },
+    }),
+  );
 
   nunjucks.configure([path.join(frontendDirectory, 'views'), govukFrontendDistributionDirectory], {
     autoescape: true,
@@ -49,6 +78,7 @@ export function createApplication(): Express {
 
   application.use('/', homeRouter);
   application.use('/before-you-start', beforeYouStartRouter);
+  application.use('/', addressRouter);
 
   return application;
 }

@@ -1,5 +1,6 @@
 {% extends "layout.njk" %}
 {% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
 
 {% block content %}
   {{ govukBackLink({
@@ -17,4 +18,9 @@
   <p class="govuk-body">
     This is a fictional training service. Do not enter real personal information.
   </p>
+
+  {{ govukButton({
+    text: "Continue",
+    href: "/address"
+  }) }}
 {% endblock %}
