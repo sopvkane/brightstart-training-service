@@ -1,185 +1,199 @@
 # How the service works
 
-This guide helps you investigate behaviour by following a request from a URL to the code that
-creates the response.
+Use this guide to investigate behaviour by following a request from the browser, through the
+frontend and into the Java API. You do not need to understand every file before starting. Choose
+one visible behaviour and trace only the path involved.
 
 ## Start with something you can observe
 
-When you open a URL, the browser sends an **HTTP request** to an application. HTTP is the protocol
-web browsers and web applications use to communicate. The application processes the request and
-sends an HTTP response back.
+Run both applications using the [README](../README.md), then try:
 
-Run the applications using the [README](../README.md), then try these requests:
+- <http://localhost:3000/address> for the postcode form;
+- `BT9 7EP` to see several fictional addresses;
+- `ZZ1 1ZZ` to see one fictional address;
+- another postcode to see the no-results page; and
+- <http://localhost:8080/api/health> to request the API directly.
 
-- <http://localhost:3000> requests the frontend home page.
-- <http://localhost:3000/before-you-start> requests the next page in the service journey.
-- <http://localhost:3000/address> requests the postcode-entry page.
-- <http://localhost:8080/api/health> requests the API health response.
+When you open a URL, the browser sends an **HTTP request** and receives an HTTP response. A path
+such as `/address` identifies the requested behaviour. The method describes the kind of request:
+`GET` asks for information, while `POST` submits form data.
 
-These requests use the HTTP method `GET`, which asks an application for information. `/`,
-`/before-you-start`, `/address` and `/api/health` are **paths**: the parts of the URL that identify
-the requested behaviour.
+## Request path at a glance
 
-Before reading every file, choose one request and follow only the code involved in it.
+```mermaid
+flowchart LR
+    Browser --> FrontendRoute[Frontend route]
+    FrontendRoute --> ApiClient[Frontend API client]
+    ApiClient --> JavaController[Java controller]
+    JavaController --> LookupService[Address lookup service]
+    LookupService --> SyntheticData[Synthetic address data]
+    SyntheticData --> LookupService
+    LookupService --> JavaController
+    JavaController --> ApiClient
+    ApiClient --> FrontendRoute
+    FrontendRoute --> Browser
+```
+
+The browser never calls the Java API during the journey. It submits the postcode to the frontend,
+which keeps journey state in a session and calls the API on the user's behalf. The API looks up
+fixed fictional data and sends JSON back. The frontend uses that response to produce HTML for the
+browser.
+
+The diagram is a map, not a replacement for the code. Follow the numbered steps below when you
+need to understand where a value changes or an error begins.
 
 ## Code map
-
-The tree below shows the files on each request path. A name ending in `.ts` is TypeScript, `.njk` is
-a Nunjucks template and `.java` is Java.
 
 ```text
 frontend/
 ├── src/
-│   ├── server.ts              starts the HTTP server
-│   ├── app.ts                 configures the frontend application
-│   ├── routes/
-│   │   ├── home.ts            handles GET /
-│   │   ├── before-you-start.ts handles GET /before-you-start
-│   │   └── address.ts         handles the postcode routes
-│   └── types/
-│       └── express-session.d.ts describes the stored session data
+│   ├── server.ts                 starts the HTTP server
+│   ├── app.ts                    configures the frontend and its dependencies
+│   ├── address-api-client.ts     calls and checks the Java address API
+│   ├── routes/address.ts         handles postcode and address-selection requests
+│   └── types/express-session.d.ts describes journey state stored in the session
 ├── views/
-│   ├── layout.njk             shared HTML page structure
-│   ├── home.njk               start page content
-│   ├── before-you-start.njk   Before you start page content
-│   ├── address.njk            postcode form and validation errors
-│   └── address-confirmed.njk  temporary confirmation page
+│   ├── address.njk               postcode form
+│   ├── select-address.njk        results, selection and validation
+│   ├── address-lookup-error.njk  unavailable-service message
+│   └── address-confirmed.njk     selected-address confirmation
 └── test/
-    ├── home.test.ts           checks the start page over HTTP
-    ├── before-you-start.test.ts checks the Before you start page over HTTP
-    └── address.test.ts        checks postcode entry and stored state
+    ├── address.test.ts            checks the browser journey over HTTP
+    └── address-api-client.test.ts checks the frontend-to-API boundary
 
 api/src/
 ├── main/java/com/example/brightstart/training/
-│   ├── TrainingApiApplication.java       starts the Java application
-│   └── health/
-│       ├── HealthController.java         handles GET /api/health
-│       └── HealthResponse.java           describes the response data
-└── test/java/com/example/brightstart/training/health/
-    └── HealthControllerTest.java         checks the health response
+│   ├── TrainingApiApplication.java starts Spring Boot
+│   ├── health/                      contains the health endpoint
+│   └── address/
+│       ├── AddressController.java   handles GET /api/addresses
+│       ├── AddressLookupService.java chooses the synthetic result
+│       ├── Address.java             describes one address
+│       └── AddressLookupResponse.java describes the JSON response
+└── test/java/com/example/brightstart/training/
+    ├── health/HealthControllerTest.java
+    └── address/AddressControllerTest.java
 ```
 
-## Follow a frontend request
+A `.ts` file is TypeScript, `.njk` is a Nunjucks template and `.java` is Java.
 
-A **framework** is reusable code that provides some of the structure and common behaviour needed to
-build an application. Express is the Node.js web framework used by the frontend. A **route**
-connects an HTTP method and path to a **handler**, the function that runs when the route matches a
-request.
+## Follow the postcode and address journey
 
-For a frontend page:
+1. `GET /address` renders the postcode form from `address.njk`.
+2. The form sends the entered value to `POST /address`.
+3. The route trims the value, changes letters to uppercase and stores the postcode in the session.
+4. A `303` redirect asks the browser to make a new `GET /select-address` request.
+5. The selection route reads the postcode from the session and asks `address-api-client.ts` for
+   addresses.
+6. The client sends `GET /api/addresses?postcode=...` to the Java API.
+7. `AddressController` passes the postcode to `AddressLookupService`.
+8. The service returns the matching fictional addresses. Spring **serialises** the Java records,
+   converting them into JSON for the HTTP response.
+9. The frontend checks the response and renders the addresses as radio buttons, allowing one
+   choice.
+10. `POST /select-address` checks that the submitted ID belongs to an address returned by the API,
+    then stores that complete address in the session.
+11. A final `303` redirect displays the stored address at `GET /address-confirmed`.
 
-1. `server.ts` starts the Express application created by `app.ts`.
-2. `app.ts` configures Express, Nunjucks, sessions and static assets, then registers the routes.
-   Static assets are files such as CSS and images that the application sends without generating
-   them dynamically.
-3. Express selects the route whose path matches the request.
-4. The route's handler asks Nunjucks to render the corresponding template. **Render** means combine
-   a template with its data to produce the final HTML.
-5. The page template supplies the content and extends `layout.njk`, the shared page structure.
-6. Express sends the resulting HTML response to the browser.
+A **session** is state kept on the server for one browser journey. `express-session` gives the
+browser a cookie containing a session identifier; the postcode and address remain in frontend
+memory. Restarting the frontend clears them because this training service has no database.
 
-| Request                  | Route                        | Template                                        |
-| ------------------------ | ---------------------------- | ----------------------------------------------- |
-| `GET /`                  | `routes/home.ts`             | `home.njk`                                      |
-| `GET /before-you-start`  | `routes/before-you-start.ts` | `before-you-start.njk`                          |
-| `GET /address`           | `routes/address.ts`          | `address.njk`                                   |
-| `POST /address`          | `routes/address.ts`          | Redirect or `address.njk` when validation fails |
-| `GET /address-confirmed` | `routes/address.ts`          | `address-confirmed.njk`                         |
+The redirects use the POST/Redirect/GET pattern. Refreshing the result page repeats only the final
+`GET`, rather than submitting the form again.
 
-Nunjucks is a templating system. Its templates contain HTML plus instructions for inserting content
-and reusing shared layouts.
+## The address API contract
 
-## Follow a postcode submission
+The frontend requests `GET /api/addresses?postcode=BT9%207EP`. A successful response has one
+`addresses` array. Each item has the same five named fields:
 
-An HTML **form** sends values entered by the user to an application. The postcode form uses the
-HTTP method `POST`, which sends the form data to `POST /address` for processing.
-
-```text
-GET /address
-    ↓
-postcode form
-    ↓ POST /address
-trim spaces and convert letters to uppercase
-    ↓
-store postcode in the session
-    ↓ 303 redirect
-GET /address-confirmed
-    ↓
-display the stored postcode
+```json
+{
+  "addresses": [
+    {
+      "id": "bt9-7ep-1",
+      "line1": "1 Apprentice Avenue",
+      "line2": "Learning Quarter",
+      "town": "Belfast",
+      "postcode": "BT9 7EP"
+    }
+  ]
+}
 ```
 
-A **session** is server-side state kept for one browser journey. `express-session` stores the
-postcode in the frontend's memory and gives the browser a cookie containing only the session
-identifier. A cookie is a small value that the browser returns with later requests. This training
-service does not store the postcode in a database, so restarting the frontend clears it.
+That agreed response shape is an **API contract**. The Java records define what the API sends, and
+the TypeScript types plus response checks define what the frontend accepts. No match is still a
+successful response with an empty array. The controlled failure returns HTTP status `503` instead.
 
-If the postcode is empty, the handler renders `address.njk` again with a `400` response, an error
-summary and an error attached to the input. If it is present, the handler normalises and stores it,
-then sends a `303` **redirect**. A redirect tells the browser to make a new request to another URL.
+## Follow a failure
 
-This produces the POST/Redirect/GET pattern: the browser submits once with `POST`, then displays the
-result using `GET`. Refreshing the confirmation page repeats only the final `GET`, not the form
-submission.
+Different outcomes have deliberately different meanings:
 
-### Pause or record the request
+| Input or action                      | Result                                         |
+| ------------------------------------ | ---------------------------------------------- |
+| Empty postcode                       | Frontend validation error                      |
+| `BT9 7EP`                            | Three fictional addresses                      |
+| `ZZ1 1ZZ`                            | One fictional address                          |
+| An unrecognised postcode             | Successful API response with no addresses      |
+| `ZZ9 9ZZ`                            | Deliberate API `503 Service Unavailable`       |
+| Continue without choosing an address | Frontend validation error                      |
+| Stop the API before searching        | Frontend displays the unavailable-service page |
 
-A **breakpoint** tells a debugger to pause when a line runs so you can inspect the current values.
-If your editor's Node.js debugger is configured, place one inside the handler for the page you are
-investigating, then refresh the page.
+The controlled failure is fixed rather than random, so learners and tests can reproduce it. No
+postcode is sent to an external service and none of these results comes from real address data.
 
-You can also add a temporary `console.log` inside the handler. Refresh the page and look in the
-terminal running the frontend. Remove temporary diagnostic output before committing unless it has a
-lasting operational purpose.
+When the API returns an unsuccessful status, returns unexpected JSON or cannot be reached, the
+frontend deliberately shows the same safe message. Technical details stay in the application
+boundary rather than being displayed to the user.
 
-### Why `app.ts` and `server.ts` are separate
+## Request the API directly with Bruno
 
-`app.ts` configures the application without opening a fixed port. `server.ts` takes that configured
-application and starts the real server. The frontend tests can therefore use the same application
-configuration without starting another server on port 3000.
+The `bruno` folder contains local requests for health, multiple addresses, one address, no results
+and the controlled failure. Bruno is an API client: it lets you send a request and inspect the raw
+response without going through the frontend.
 
-## Follow the API health request
+Start the Java API, open the `bruno` folder as a collection in the Bruno application, then run one
+request. Compare its URL, status and JSON with `AddressControllerTest`. The collection contains no
+credentials and its `baseUrl` points only to `localhost`.
 
-Spring Boot is the framework that starts and configures the Java API application. Its embedded web
-server is included in the application rather than installed and started separately.
+Using Bruno is optional for running the service. Do not install a global command-line tool merely
+to run the normal automated checks.
 
-For `GET /api/health`:
+## Pause or record a request
 
-1. `TrainingApiApplication` starts Spring Boot and the embedded web server.
-2. Spring finds the matching mapping in `HealthController`. A **controller** is a Java class that
-   handles HTTP requests; the mapping connects the method and path to a Java method.
-3. `getHealth` returns a `HealthResponse` record. A Java **record** is a concise class used here to
-   describe the response data.
-4. Spring **serialises** the record: it converts the Java value into the JSON text sent in the HTTP
-   response.
+A **breakpoint** tells a debugger to pause so you can inspect current values. Useful places include
+the `GET /select-address` handler, `AddressLookupClient.findAddresses` and
+`AddressController.findAddresses`.
 
-If your editor's Java debugger is configured, place a breakpoint on the first line of
-`HealthController.getHealth`. Request the health URL, inspect the returned record and compare it with
-the JSON response.
+You can also add a temporary `console.log` in TypeScript. Refresh the page and read the frontend
+terminal. Remove temporary diagnostic output before committing unless it has a lasting purpose.
 
-## Reference: GOV.UK Frontend and service assets
+## Why some files are separate
 
-You can skip this section unless you are changing templates, styles or frontend asset configuration.
+`app.ts` configures Express without opening a port, while `server.ts` starts the real server. Tests
+can therefore use the configured application without competing for port 3000.
 
-GOV.UK Frontend is the component and styling library used by the frontend. This service uses its
-supported Sass and Nunjucks APIs with generic, non-GOV.UK branding:
+`address-api-client.ts` owns HTTP communication and response checking. The route owns browser
+behaviour and session state. In tests, a small replacement client returns a chosen result so route
+tests remain reliable without a Java process. This is a boundary with a concrete purpose, not a
+general layer for every function.
 
-- **Node module resolution** finds an installed package by following Node.js package lookup rules.
-  It works whether npm installs the package beside the frontend or **hoists** it to the repository
-  root to share it across workspaces.
-- Nunjucks loads the Generic header **macro** from the resolved package. A macro is a reusable
-  template component.
-- Sass uses its Node package importer to load GOV.UK Frontend and apply the service's font and colour
-  choices.
-- Service-owned static assets live in `frontend/public` and are available under `/assets`.
-- The Start now link uses the GOV.UK Frontend button component. `app.ts` makes the library's browser
-  JavaScript and source map available at two specific `/assets/govuk` paths, and `layout.njk`
-  initialises it. This provides the component's expected keyboard behaviour without exposing the
-  rest of the installed package as static files.
+The API has a controller and a service because they answer different questions: the controller
+defines the HTTP contract; the service decides which addresses a postcode produces. There is no
+repository or database abstraction because no persistent data source exists.
+
+## Configuration
+
+The frontend calls `http://localhost:8080` by default. Set `ADDRESS_API_BASE_URL` only when the API
+really runs elsewhere. No configuration framework or API key is required.
+
+GOV.UK Frontend supplies accessible components and styles, but the service uses its own generic
+branding. Node module resolution locates the installed package whether npm places it in the
+frontend workspace or hoists it to the repository root.
 
 ## When the behaviour is unclear
 
-Write down the URL or command, the result you expected and the result you actually observed. Follow
-the request one step at a time and run the most focused relevant test. The
-[testing guide](testing.md) explains how to select a test, and the
-[troubleshooting guide](troubleshooting.md) explains how to collect useful evidence before asking
-for help.
+Write down the request, the result you expected and the result you observed. Reproduce it, choose
+the smallest relevant test, then trace one arrow in the diagram at a time. The
+[testing guide](testing.md) explains focused tests, and the
+[troubleshooting guide](troubleshooting.md) helps you collect evidence before asking for help.

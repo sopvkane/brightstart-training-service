@@ -1,0 +1,50 @@
+{% extends "layout.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+
+{% block content %}
+  {{ govukBackLink({
+    text: "Back",
+    href: "/address"
+  }) }}
+
+  {% if errors %}
+    {{ govukErrorSummary({
+      titleText: "There is a problem",
+      errorList: errors
+    }) }}
+  {% endif %}
+
+  {% if addresses.length %}
+    <form method="post" action="/select-address" novalidate>
+      {{ govukRadios({
+        name: "addressId",
+        idPrefix: "addressId",
+        fieldset: {
+          legend: {
+            text: "Select your address",
+            classes: "govuk-fieldset__legend--l",
+            isPageHeading: true
+          }
+        },
+        hint: {
+          text: "These fictional addresses were found for " + postcode + "."
+        },
+        items: addressItems,
+        errorMessage: {
+          text: addressError
+        } if addressError
+      }) }}
+
+      {{ govukButton({
+        text: "Continue"
+      }) }}
+    </form>
+  {% else %}
+    <h1 class="govuk-heading-xl">No addresses found</h1>
+    <p class="govuk-body">We could not find any addresses for {{ postcode }}.</p>
+    <p class="govuk-body"><a class="govuk-link" href="/address">Check the postcode and try again</a>.</p>
+  {% endif %}
+{% endblock %}

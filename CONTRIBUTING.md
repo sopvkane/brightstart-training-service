@@ -14,6 +14,11 @@ Use the ticket reference as the complete branch name:
 A Git **branch** gives you a separate place to make one change. A **pull request**, often shortened
 to **PR**, asks other developers to review that branch before it is merged into `main`.
 
+A delivery ticket reference and a GitHub issue number are related but not interchangeable. For
+example, `DEV-004` is the ticket reference and branch name, while `#4` means GitHub issue 4. Writing
+`Closes #4` in a pull request links that issue; GitHub closes it when the pull request is merged
+into the default branch.
+
 ```text
 Issue:  DEV-123 Fix postcode validation
 Branch: DEV-123
@@ -158,13 +163,22 @@ DEV-123: Fix postcode validation
 ```
 
 Complete the pull request template. Explain the behaviour changed, why the change was needed, how
-you tested it and anything that deserves particular reviewer attention.
+you tested it, then replace `Closes #` with the real GitHub issue number. Do not put the delivery
+ticket number after `#` unless it is also the issue number.
 
 ## Read CI results
 
 **Continuous integration**, usually shortened to **CI**, runs the repository's automated checks on
 GitHub. A CI **job** groups related work, and each named **step** runs one action or command. The
-commands are defined in `.github/workflows/ci.yml`, known as the workflow file.
+commands are defined in files under `.github/workflows`:
+
+- `ci.yml` runs the same frontend and API checks used locally;
+- `dependency-review.yml` checks whether a pull request introduces a known vulnerable dependency;
+  and
+- `codeql.yml` examines JavaScript, TypeScript and Java for recognised security problems.
+
+These checks support review; a green result does not prove that a change is correct or remove the
+need to understand it.
 
 If CI fails:
 
@@ -176,6 +190,28 @@ If CI fails:
 
 Do not repeatedly rerun CI without understanding why it failed. A local pass is useful evidence,
 but compare tool versions and environment details when CI behaves differently.
+
+### Repository rules maintained in GitHub
+
+The workflow files define the checks, but a repository administrator must configure the rules that
+decide when a pull request may be merged. The intended rules are:
+
+- branch names use `DEV-[number]`;
+- changes to `main` go through a pull request;
+- frontend, API and security checks must pass;
+- review conversations must be resolved;
+- one approval is required when multiple reviewers are available; and
+- force pushes to `main` are not allowed.
+
+These rules belong in GitHub's repository settings. A file in this repository could describe them
+but could not enforce them, so no pretend local configuration is included.
+
+### Dependabot pull requests
+
+Dependabot checks npm, Maven and GitHub Actions dependencies each week and may open update pull
+requests. Treat one like any other proposed change: understand what is changing, read relevant
+release notes, wait for CI and manually check affected behaviour when appropriate. Do not merge an
+automated pull request solely because it was created by a bot.
 
 ## Respond to review
 

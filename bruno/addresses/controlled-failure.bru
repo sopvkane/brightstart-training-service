@@ -1,0 +1,17 @@
+meta {
+  name: Controlled lookup failure
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/addresses?postcode=ZZ9%209ZZ
+  body: none
+  auth: inherit
+}
+
+tests {
+  test("returns HTTP 503", function () {
+    expect(res.getStatus()).to.equal(503);
+  });
+}

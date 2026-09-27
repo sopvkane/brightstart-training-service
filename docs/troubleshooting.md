@@ -103,6 +103,23 @@ Check:
 
 Restart the relevant application after fixing the first error shown in its terminal.
 
+## The page says it cannot find addresses right now
+
+The frontend shows this message when it cannot get a successful response from the Java API. Check
+that the API terminal is still running and that <http://localhost:8080/api/health> returns
+`{"status":"UP"}`.
+
+The frontend uses `http://localhost:8080` by default. If you deliberately started the API on a
+different address, set `ADDRESS_API_BASE_URL` before starting the frontend. For example, on macOS
+or Linux:
+
+```bash
+ADDRESS_API_BASE_URL=http://localhost:8081 npm run dev:frontend
+```
+
+Use the environment-variable syntax for your shell if you are using Windows. Do not change the
+application's default merely to work around an API process that has stopped.
+
 ## Port 3000 or 8080 is already in use
 
 A **port** is the local number identifying which running process should receive a request. This

@@ -4,13 +4,16 @@
 {% block content %}
   {{ govukBackLink({
     text: "Back",
-    href: "/address"
+    href: "/select-address"
   }) }}
 
-  <h1 class="govuk-heading-xl">Postcode captured</h1>
-  <p class="govuk-body">You entered <strong>{{ postcode }}</strong>.</p>
+  <h1 class="govuk-heading-xl">Address selected</h1>
+  <p class="govuk-body">You selected:</p>
   <p class="govuk-body">
-    Your postcode has been saved for this training journey. Address lookup will be added later; no
-    address has been found yet.
+    {{ address.line1 }}<br>
+    {% if address.line2 %}{{ address.line2 }}<br>{% endif %}
+    {{ address.town }}<br>
+    {{ address.postcode }}
   </p>
+  <p class="govuk-body">Your address has been saved for this training journey.</p>
 {% endblock %}

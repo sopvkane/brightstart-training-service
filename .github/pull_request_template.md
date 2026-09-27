@@ -1,19 +1,20 @@
 ## What
 
-<!-- Describe the behaviour or code that changed. Be specific and concise. -->
+<!-- Briefly describe what you changed. -->
 
 ## Why
 
-<!-- Explain the problem this solves or the ticket requirement it satisfies. -->
+<!-- Why was this change needed? -->
 
 ## How I tested it
 
-<!-- List the commands or manual checks you ran and their results. -->
+<!-- List the checks or evidence used to verify the change. -->
 
-## Evidence
+- [ ] Tests pass locally
+- [ ] I manually tested the change where appropriate
 
-<!-- Add useful screenshots, responses or logs when the reviewer cannot easily observe the result. -->
+## Ticket
 
-## Reviewer notes
+<!-- Use the GitHub issue number, for example: Closes #3 -->
 
-<!-- Note anything you are unsure about, a choice with downsides, or an area where you want particular feedback. -->
+Closes #
