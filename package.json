@@ -1,0 +1,26 @@
+{
+  "name": "brightstart-training-service",
+  "private": true,
+  "packageManager": "npm@10.9.9",
+  "engines": {
+    "node": ">=22 <23",
+    "npm": ">=10 <11"
+  },
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "build:frontend": "npm run build --workspace @brightstart/training-frontend",
+    "build:styles:frontend": "npm run build:styles --workspace @brightstart/training-frontend",
+    "check:frontend": "npm run check --workspace @brightstart/training-frontend",
+    "dev:frontend": "npm run dev --workspace @brightstart/training-frontend",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint:frontend": "npm run lint --workspace @brightstart/training-frontend",
+    "test:frontend": "npm run test --workspace @brightstart/training-frontend",
+    "typecheck:frontend": "npm run typecheck --workspace @brightstart/training-frontend"
+  },
+  "devDependencies": {
+    "prettier": "3.9.9"
+  }
+}

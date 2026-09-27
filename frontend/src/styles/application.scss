@@ -1,0 +1,15 @@
+@use 'pkg:govuk-frontend' as * with (
+  $govuk-font-family: (
+    'Helvetica Neue',
+    Helvetica,
+    Arial,
+    sans-serif,
+  ),
+  $govuk-functional-colours: (
+    brand: #4c2c92,
+  )
+);
+
+.app-generic-header {
+  border-bottom: govuk-spacing(2) solid govuk-functional-colour(brand);
+}
