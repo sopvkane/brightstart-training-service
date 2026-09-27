@@ -4,11 +4,12 @@ import path from 'node:path';
 import express, { type Express } from 'express';
 import nunjucks from 'nunjucks';
 
+import { beforeYouStartRouter } from './routes/before-you-start.js';
 import { homeRouter } from './routes/home.js';
 
 const require = createRequire(import.meta.url);
 
-function resolveGovukFrontendTemplatesDirectory(): string {
+function resolveGovukFrontendDistributionDirectory(): string {
   // npm may install this workspace dependency beside the frontend or hoist it to the repository
   // root. Node's resolver finds the installed package reliably in either layout.
   const packageJson = require.resolve('govuk-frontend/package.json');
@@ -19,11 +20,11 @@ function resolveGovukFrontendTemplatesDirectory(): string {
 export function createApplication(): Express {
   const application = express();
   const frontendDirectory = path.resolve(import.meta.dirname, '..');
-  const govukFrontendTemplatesDirectory = resolveGovukFrontendTemplatesDirectory();
+  const govukFrontendDistributionDirectory = resolveGovukFrontendDistributionDirectory();
 
   application.disable('x-powered-by');
 
-  nunjucks.configure([path.join(frontendDirectory, 'views'), govukFrontendTemplatesDirectory], {
+  nunjucks.configure([path.join(frontendDirectory, 'views'), govukFrontendDistributionDirectory], {
     autoescape: true,
     express: application,
     noCache: process.env.NODE_ENV !== 'production',
@@ -34,7 +35,20 @@ export function createApplication(): Express {
     express.static(path.join(frontendDirectory, 'public'), { dotfiles: 'deny', index: false }),
   );
 
+  application.get('/assets/govuk/govuk-frontend.min.js', (_request, response) => {
+    response.sendFile(
+      path.join(govukFrontendDistributionDirectory, 'govuk', 'govuk-frontend.min.js'),
+    );
+  });
+
+  application.get('/assets/govuk/govuk-frontend.min.js.map', (_request, response) => {
+    response.sendFile(
+      path.join(govukFrontendDistributionDirectory, 'govuk', 'govuk-frontend.min.js.map'),
+    );
+  });
+
   application.use('/', homeRouter);
+  application.use('/before-you-start', beforeYouStartRouter);
 
   return application;
 }

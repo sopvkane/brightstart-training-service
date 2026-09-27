@@ -1,12 +1,28 @@
 {% extends "layout.njk" %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
 
 {% block content %}
   <h1 class="govuk-heading-xl">BrightStart Training Service</h1>
   <p class="govuk-body-l">
-    A synthetic service for practising how to investigate, change and test a government-style
-    application.
+    Use this service to confirm your details and identity before accessing a fictional government
+    service.
   </p>
   <p class="govuk-body">
-    It is not a real government service and does not use real client or public data.
+    This is a fictional training service. It is not a real government service and you must not enter
+    real personal information.
   </p>
+
+  <h2 class="govuk-heading-m">What you will need to do</h2>
+  <p class="govuk-body">During the journey, you will be asked to:</p>
+  <ul class="govuk-list govuk-list--bullet">
+    <li>confirm your address</li>
+    <li>tell us which identity document you have</li>
+    <li>provide an image of a document</li>
+  </ul>
+
+  {{ govukButton({
+    text: "Start now",
+    href: "/before-you-start",
+    isStartButton: true
+  }) }}
 {% endblock %}

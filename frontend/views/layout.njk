@@ -10,6 +10,10 @@
     <link rel="stylesheet" href="/assets/application.css">
   </head>
   <body class="govuk-template__body">
+    <script>
+      document.body.className +=
+        ' js-enabled' + ('noModule' in HTMLScriptElement.prototype ? ' govuk-frontend-supported' : '')
+    </script>
     <a class="govuk-skip-link" href="#main-content">Skip to main content</a>
 
     {{ govukGenericHeader({
@@ -21,5 +25,11 @@
     <main class="govuk-main-wrapper govuk-width-container" id="main-content" tabindex="-1">
       {% block content %}{% endblock %}
     </main>
+
+    <script type="module">
+      import { initAll } from '/assets/govuk/govuk-frontend.min.js'
+
+      initAll()
+    </script>
   </body>
 </html>
