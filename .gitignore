@@ -1,0 +1,13 @@
+.DS_Store
+.env
+*.log
+
+.idea/
+.vscode/
+
+node_modules/
+frontend/dist/
+frontend/public/application.css
+frontend/public/application.css.map
+
+api/target/

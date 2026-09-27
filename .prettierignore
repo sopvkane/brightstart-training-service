@@ -1,0 +1,7 @@
+node_modules/
+frontend/dist/
+frontend/public/application.css
+frontend/views/
+api/target/
+api/mvnw
+api/mvnw.cmd
