@@ -1,6 +1,7 @@
 import { Router, type Response } from 'express';
 
-import type { Address, AddressLookupClient } from '../address-api-client.js';
+import type { AddressJourney, AddressSelection } from '../address-journey-service.js';
+import type { Address } from '../domain/address.js';
 
 const postcodeRequiredMessage = 'Enter your postcode';
 const addressRequiredMessage = 'Select an address';
@@ -34,7 +35,7 @@ function renderLookupFailure(response: Response): void {
   });
 }
 
-export function createAddressRouter(addressLookupClient: AddressLookupClient): Router {
+export function createAddressRouter(addressJourney: AddressJourney): Router {
   const addressRouter = Router();
 
   addressRouter.get('/address', (_request, response) => {
@@ -58,8 +59,7 @@ export function createAddressRouter(addressLookupClient: AddressLookupClient): R
       return;
     }
 
-    request.session.postcode = normalisedPostcode;
-    delete request.session.selectedAddress;
+    request.session.journey = { postcode: normalisedPostcode };
 
     request.session.save((error) => {
       if (error) {
@@ -72,7 +72,7 @@ export function createAddressRouter(addressLookupClient: AddressLookupClient): R
   });
 
   addressRouter.get('/select-address', async (request, response) => {
-    const postcode = request.session.postcode;
+    const postcode = request.session.journey?.postcode;
 
     if (postcode === undefined) {
       response.redirect('/address');
@@ -82,7 +82,7 @@ export function createAddressRouter(addressLookupClient: AddressLookupClient): R
     let addresses: Address[];
 
     try {
-      addresses = await addressLookupClient.findAddresses(postcode);
+      addresses = await addressJourney.findAddresses(postcode);
     } catch {
       renderLookupFailure(response);
       return;
@@ -100,7 +100,7 @@ export function createAddressRouter(addressLookupClient: AddressLookupClient): R
   });
 
   addressRouter.post('/select-address', async (request, response, next) => {
-    const postcode = request.session.postcode;
+    const postcode = request.session.journey?.postcode;
 
     if (postcode === undefined) {
       response.redirect('/address');
@@ -109,30 +109,31 @@ export function createAddressRouter(addressLookupClient: AddressLookupClient): R
 
     const selectedAddressId = readFormValue(request.body as unknown, 'addressId');
 
-    let addresses: Address[];
+    let selection: AddressSelection;
 
     try {
-      addresses = await addressLookupClient.findAddresses(postcode);
+      selection = await addressJourney.selectAddress(postcode, selectedAddressId);
     } catch {
       renderLookupFailure(response);
       return;
     }
 
-    const selectedAddress = addresses.find((address) => address.id === selectedAddressId);
-
-    if (selectedAddress === undefined) {
+    if (selection.selectedAddress === undefined) {
       response.status(400).render('select-address.njk', {
         pageTitle: 'Error: Select your address - BrightStart Training Service',
         postcode,
-        addresses,
-        addressItems: addressRadioItems(addresses, selectedAddressId),
+        addresses: selection.addresses,
+        addressItems: addressRadioItems(selection.addresses, selectedAddressId),
         addressError: addressRequiredMessage,
         errors: [{ text: addressRequiredMessage, href: '#addressId' }],
       });
       return;
     }
 
-    request.session.selectedAddress = selectedAddress;
+    request.session.journey = {
+      postcode,
+      selectedAddress: selection.selectedAddress,
+    };
 
     request.session.save((error) => {
       if (error) {
@@ -145,7 +146,7 @@ export function createAddressRouter(addressLookupClient: AddressLookupClient): R
   });
 
   addressRouter.get('/address-confirmed', (request, response) => {
-    const selectedAddress = request.session.selectedAddress;
+    const selectedAddress = request.session.journey?.selectedAddress;
 
     if (selectedAddress === undefined) {
       response.redirect('/select-address');

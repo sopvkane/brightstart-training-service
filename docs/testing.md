@@ -97,20 +97,22 @@ through Spring MVC during a test without starting the API on port 8080. They che
 - the media type, which identifies the response format as `application/json`; and
 - the JSON response data.
 
-The address controller test includes the real `AddressLookupService`. It therefore checks the HTTP
-contract and the synthetic lookup behaviour together without duplicating the service rules in a
-mock. A separate service test would repeat the same examples without adding useful confidence.
+The address controller test includes the real `AddressLookupService` and `SyntheticAddressSource`.
+It therefore checks the HTTP contract, Problem Details failure response and synthetic lookup
+behaviour together without duplicating the fixed examples in another Java test.
 
 ### Test the boundary without starting both applications
 
-The Express route tests provide a small `AddressLookupClient` replacement. Each test controls
-whether lookup returns several addresses, one address, no addresses or an error. The rest of the
-request still goes through the real route, session and Nunjucks template.
+The Express route tests provide a small `AddressJourney` replacement. Each test controls whether
+the journey returns several addresses, one address, no addresses, a selected address or an error.
+The rest of the request still goes through the real route, session and Nunjucks template.
 
-`address-api-client.test.ts` checks the other side of that boundary: the URL sent to the Java API,
-unsuccessful HTTP responses and unexpected JSON. Together, these focused tests identify whether a
-failure belongs to page behaviour or HTTP communication. Manual verification with both running
-applications then checks that the two agreed contracts really connect.
+`address-journey-service.test.ts` checks the meaningful application decision: only an address
+returned for the current postcode can be selected. `address-api-client.test.ts` checks the next
+boundary: URL encoding, JSON requests, unsuccessful HTTP responses, malformed responses, network
+failures and timeouts. Together, these focused tests identify whether a failure belongs to browser
+behaviour, journey decisions or HTTP communication. Playwright then checks that the real frontend
+and API contracts connect.
 
 Run just the Java address tests from the `api` folder:
 

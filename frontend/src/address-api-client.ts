@@ -1,14 +1,24 @@
-export type Address = {
-  id: string;
-  line1: string;
-  line2: string;
-  town: string;
-  postcode: string;
-};
+import type { Address } from './domain/address.js';
+
+const defaultAddressApiBaseUrl = 'http://localhost:8080';
+const defaultRequestTimeoutMilliseconds = 3_000;
 
 export type AddressLookupClient = {
   findAddresses(postcode: string): Promise<Address[]>;
 };
+
+export type AddressLookupFailureReason = 'unavailable' | 'invalid-response';
+
+export class AddressLookupError extends Error {
+  public constructor(
+    public readonly reason: AddressLookupFailureReason,
+    message: string,
+    cause?: unknown,
+  ) {
+    super(message, { cause });
+    this.name = 'AddressLookupError';
+  }
+}
 
 type AddressLookupResponse = {
   addresses: Address[];
@@ -43,22 +53,54 @@ function isAddressLookupResponse(value: unknown): value is AddressLookupResponse
   );
 }
 
-export function createAddressLookupClient(apiBaseUrl: string): AddressLookupClient {
+export function createAddressLookupClient(
+  apiBaseUrl = process.env.ADDRESS_API_BASE_URL ?? defaultAddressApiBaseUrl,
+  requestTimeoutMilliseconds = defaultRequestTimeoutMilliseconds,
+): AddressLookupClient {
   return {
     async findAddresses(postcode: string): Promise<Address[]> {
       const lookupUrl = new URL('/api/addresses', apiBaseUrl);
       lookupUrl.searchParams.set('postcode', postcode);
 
-      const response = await fetch(lookupUrl);
+      let response: Response;
 
-      if (!response.ok) {
-        throw new Error(`Address API returned HTTP ${response.status}`);
+      try {
+        response = await fetch(lookupUrl, {
+          headers: { accept: 'application/json' },
+          signal: AbortSignal.timeout(requestTimeoutMilliseconds),
+        });
+      } catch (error) {
+        throw new AddressLookupError(
+          'unavailable',
+          'The address API request could not be completed.',
+          error,
+        );
       }
 
-      const responseBody: unknown = await response.json();
+      if (!response.ok) {
+        throw new AddressLookupError(
+          'unavailable',
+          `The address API returned HTTP ${response.status}.`,
+        );
+      }
+
+      let responseBody: unknown;
+
+      try {
+        responseBody = await response.json();
+      } catch (error) {
+        throw new AddressLookupError(
+          'invalid-response',
+          'The address API returned a response that was not valid JSON.',
+          error,
+        );
+      }
 
       if (!isAddressLookupResponse(responseBody)) {
-        throw new Error('Address API returned an unexpected response');
+        throw new AddressLookupError(
+          'invalid-response',
+          'The address API returned an unexpected response.',
+        );
       }
 
       return responseBody.addresses;

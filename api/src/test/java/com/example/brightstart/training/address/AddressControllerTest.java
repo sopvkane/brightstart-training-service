@@ -13,7 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AddressController.class)
-@Import(AddressLookupService.class)
+@Import({AddressLookupService.class, SyntheticAddressSource.class, AddressApiExceptionHandler.class})
 class AddressControllerTest {
 
     @Autowired
@@ -48,6 +48,12 @@ class AddressControllerTest {
     @Test
     void returnsServiceUnavailableForTheControlledFailurePostcode() throws Exception {
         mockMvc.perform(get("/api/addresses").param("postcode", "ZZ9 9ZZ"))
-                .andExpect(status().isServiceUnavailable());
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.status").value(503))
+                .andExpect(jsonPath("$.title").value("Address lookup unavailable"))
+                .andExpect(jsonPath("$.detail")
+                        .value("Address lookup is temporarily unavailable. Try again later."))
+                .andExpect(jsonPath("$.instance").value("/api/addresses"));
     }
 }

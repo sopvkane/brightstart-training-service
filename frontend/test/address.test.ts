@@ -1,8 +1,9 @@
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 
-import type { Address, AddressLookupClient } from '../src/address-api-client.js';
+import type { AddressJourney } from '../src/address-journey-service.js';
 import { createApplication } from '../src/app.js';
+import type { Address } from '../src/domain/address.js';
 
 type Browser = ReturnType<typeof request.agent>;
 
@@ -23,9 +24,14 @@ const multipleAddresses: Address[] = [
   },
 ];
 
-function clientReturning(addresses: Address[]): AddressLookupClient {
+function journeyReturning(addresses: Address[]): AddressJourney {
   return {
     findAddresses: async () => Promise.resolve(addresses),
+    selectAddress: async (_postcode, submittedAddressId) =>
+      Promise.resolve({
+        addresses,
+        selectedAddress: addresses.find((address) => address.id === submittedAddressId),
+      }),
   };
 }
 
@@ -82,13 +88,14 @@ describe('postcode and address journey', () => {
 
   it('uses the postcode stored in the session to look up multiple addresses', async () => {
     let requestedPostcode = '';
-    const addressLookupClient: AddressLookupClient = {
+    const addressJourney: AddressJourney = {
       findAddresses: async (postcode) => {
         requestedPostcode = postcode;
         return Promise.resolve(multipleAddresses);
       },
+      selectAddress: async () => Promise.resolve({ addresses: [], selectedAddress: undefined }),
     };
-    const browser = request.agent(createApplication({ addressLookupClient }));
+    const browser = request.agent(createApplication({ addressJourney }));
 
     const submissionResponse = await submitPostcode(browser, '  bt9 7ep  ');
 
@@ -115,7 +122,7 @@ describe('postcode and address journey', () => {
       },
     ];
     const browser = request.agent(
-      createApplication({ addressLookupClient: clientReturning(oneAddress) }),
+      createApplication({ addressJourney: journeyReturning(oneAddress) }),
     );
     await submitPostcode(browser, 'ZZ1 1ZZ');
 
@@ -128,7 +135,7 @@ describe('postcode and address journey', () => {
   });
 
   it('explains when no addresses are returned', async () => {
-    const browser = request.agent(createApplication({ addressLookupClient: clientReturning([]) }));
+    const browser = request.agent(createApplication({ addressJourney: journeyReturning([]) }));
     await submitPostcode(browser, 'AA1 1AA');
 
     const response = await browser.get('/select-address');
@@ -141,10 +148,11 @@ describe('postcode and address journey', () => {
   });
 
   it('shows a clear error when the address API is unavailable', async () => {
-    const failingClient: AddressLookupClient = {
+    const failingJourney: AddressJourney = {
       findAddresses: async () => Promise.reject(new Error('API unavailable')),
+      selectAddress: async () => Promise.reject(new Error('API unavailable')),
     };
-    const browser = request.agent(createApplication({ addressLookupClient: failingClient }));
+    const browser = request.agent(createApplication({ addressJourney: failingJourney }));
     await submitPostcode(browser, 'ZZ9 9ZZ');
 
     const response = await browser.get('/select-address');
@@ -157,7 +165,7 @@ describe('postcode and address journey', () => {
 
   it('shows an accessible error when no address is selected', async () => {
     const browser = request.agent(
-      createApplication({ addressLookupClient: clientReturning(multipleAddresses) }),
+      createApplication({ addressJourney: journeyReturning(multipleAddresses) }),
     );
     await submitPostcode(browser, 'BT9 7EP');
     const csrfToken = await getCsrfToken(browser, '/select-address');
@@ -174,7 +182,7 @@ describe('postcode and address journey', () => {
 
   it('stores and displays the selected address after a 303 redirect', async () => {
     const browser = request.agent(
-      createApplication({ addressLookupClient: clientReturning(multipleAddresses) }),
+      createApplication({ addressJourney: journeyReturning(multipleAddresses) }),
     );
     await submitPostcode(browser, 'BT9 7EP');
     const csrfToken = await getCsrfToken(browser, '/select-address');
@@ -200,7 +208,7 @@ describe('postcode and address journey', () => {
 
   it('does not accept an address ID that the API did not return', async () => {
     const browser = request.agent(
-      createApplication({ addressLookupClient: clientReturning(multipleAddresses) }),
+      createApplication({ addressJourney: journeyReturning(multipleAddresses) }),
     );
     await submitPostcode(browser, 'BT9 7EP');
     const csrfToken = await getCsrfToken(browser, '/select-address');
@@ -227,6 +235,24 @@ describe('postcode and address journey', () => {
     const browser = request.agent(createApplication());
     await submitPostcode(browser, 'BT9 7EP');
 
+    const response = await browser.get('/address-confirmed');
+
+    expect(response.status).toBe(302);
+    expect(response.headers.location).toBe('/select-address');
+  });
+
+  it('clears the selected address when the postcode changes', async () => {
+    const browser = request.agent(
+      createApplication({ addressJourney: journeyReturning(multipleAddresses) }),
+    );
+    await submitPostcode(browser, 'BT9 7EP');
+    const csrfToken = await getCsrfToken(browser, '/select-address');
+    await browser
+      .post('/select-address')
+      .type('form')
+      .send({ _csrf: csrfToken, addressId: 'bt9-7ep-2' });
+
+    await submitPostcode(browser, 'ZZ1 1ZZ');
     const response = await browser.get('/address-confirmed');
 
     expect(response.status).toBe(302);
