@@ -1,4 +1,7 @@
-import type { DocumentUploadReceipt } from './domain/document-upload.js';
+import {
+  maximumDocumentUploadSizeBytes,
+  type DocumentUploadReceipt,
+} from './domain/document-upload.js';
 import type { IdentityDocumentType } from './domain/identity-document.js';
 
 const defaultApiBaseUrl = 'http://localhost:8080';
@@ -31,12 +34,12 @@ export class DocumentUploadError extends Error {
   }
 }
 
-function isDocumentUploadReceipt(value: unknown): value is DocumentUploadReceipt {
+function toDocumentUploadReceipt(value: unknown): DocumentUploadReceipt | undefined {
   if (typeof value !== 'object' || value === null) {
-    return false;
+    return undefined;
   }
 
-  return (
+  if (
     'uploadId' in value &&
     typeof value.uploadId === 'string' &&
     value.uploadId.length > 0 &&
@@ -48,8 +51,18 @@ function isDocumentUploadReceipt(value: unknown): value is DocumentUploadReceipt
     'size' in value &&
     typeof value.size === 'number' &&
     Number.isSafeInteger(value.size) &&
-    value.size > 0
-  );
+    value.size > 0 &&
+    value.size <= maximumDocumentUploadSizeBytes
+  ) {
+    return {
+      uploadId: value.uploadId,
+      fileName: value.fileName,
+      contentType: value.contentType,
+      size: value.size,
+    };
+  }
+
+  return undefined;
 }
 
 export function createDocumentUploadClient(
@@ -60,7 +73,9 @@ export function createDocumentUploadClient(
     async uploadDocument(documentType, documentImage) {
       const uploadUrl = new URL('/api/document-uploads', apiBaseUrl);
       const formData = new FormData();
-      const imageBlob = new Blob([documentImage.bytes], { type: documentImage.contentType });
+      const imageBytes = new ArrayBuffer(documentImage.bytes.byteLength);
+      new Uint8Array(imageBytes).set(documentImage.bytes);
+      const imageBlob = new Blob([imageBytes], { type: documentImage.contentType });
 
       formData.set('documentType', documentType);
       formData.set('document', imageBlob, documentImage.fileName);
@@ -112,14 +127,16 @@ export function createDocumentUploadClient(
         );
       }
 
-      if (!isDocumentUploadReceipt(responseBody)) {
+      const receipt = toDocumentUploadReceipt(responseBody);
+
+      if (receipt === undefined) {
         throw new DocumentUploadError(
           'invalid-response',
           'The document upload API returned an unexpected response.',
         );
       }
 
-      return responseBody;
+      return receipt;
     },
   };
 }

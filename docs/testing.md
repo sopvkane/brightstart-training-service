@@ -85,6 +85,11 @@ prerequisites and all three guidance variants. It also proves that guidance come
 selection rather than a browser query parameter. These behaviours belong in frontend tests because
 this step uses only the Express session and does not call the Java API.
 
+`document-upload.test.ts` sends tiny synthetic buffers through the real multipart parser. It checks
+the visible validation, size and single-file limits, redirect and stored receipt behaviour without
+using a real identity document. `document-upload-client.test.ts` checks the separate HTTP boundary:
+multipart field names, receipt validation, controlled API responses, network failures and timeout.
+
 ## API tests
 
 From the repository root:
@@ -95,8 +100,9 @@ cd api
 cd ..
 ```
 
-`HealthControllerTest` and `AddressControllerTest` use MockMvc, Spring's tool for sending a request
-through Spring MVC during a test without starting the API on port 8080. They check:
+`HealthControllerTest`, `AddressControllerTest` and `DocumentUploadControllerTest` use MockMvc,
+Spring's tool for sending a request through Spring MVC during a test without starting the API on
+port 8080. They check:
 
 - the HTTP status;
 - the media type, which identifies the response format as `application/json`; and
@@ -105,6 +111,10 @@ through Spring MVC during a test without starting the API on port 8080. They che
 The address controller test includes the real `AddressLookupService` and `SyntheticAddressSource`.
 It therefore checks the HTTP contract, Problem Details failure response and synthetic lookup
 behaviour together without duplicating the fixed examples in another Java test.
+
+The document-upload controller test builds very small byte arrays with recognisable JPEG and PNG
+signatures. It checks the successful receipt plus missing, empty, oversized, unsupported and invalid
+document-type requests. A declared filename or media type does not make unsupported bytes valid.
 
 ### Test the boundary without starting both applications
 
@@ -168,10 +178,11 @@ Playwright UI mode lets you select one test, run it again and inspect each actio
 you finish; Playwright will stop the applications it started.
 
 The browser tests live in `browser-tests/address-journey.spec.ts`. The successful journey covers
-postcode entry, address selection, identity-document selection, passport guidance and the
-temporary next step across the real running applications. Focused frontend tests cover the other
-guidance variants without repeating the entire browser journey. The tests use labels and roles such
-as `getByLabel` and `getByRole`, matching how a user or assistive technology finds controls. Avoid
+postcode entry, address selection, identity-document selection, passport guidance, a synthetic
+file upload and its confirmation across the real running applications. The fixture contains only
+four generated JPEG marker bytes and no identity information. Focused tests cover the validation
+variants without repeating the entire browser journey. The tests use labels and roles such as
+`getByLabel` and `getByRole`, matching how a user or assistive technology finds controls. Avoid
 replacing these with CSS selectors tied to the page's visual styling.
 
 ### Investigate a browser-test failure

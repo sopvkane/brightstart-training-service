@@ -6,7 +6,7 @@ import { identityDocumentDetails } from '../domain/identity-document.js';
 
 const noFileMessage = 'Select a JPEG or PNG image';
 const unsupportedFileMessage = 'The selected file must be a JPEG or PNG image';
-const tooLargeMessage = 'The selected file must be smaller than 5 MB';
+const tooLargeMessage = 'The selected file must be 5 MB or smaller';
 const oneFileMessage = 'Select one image file';
 
 function renderUploadForm(

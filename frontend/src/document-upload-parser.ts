@@ -5,11 +5,9 @@ import { maximumDocumentUploadSizeBytes } from './domain/document-upload.js';
 
 export type DocumentUploadParsingError = 'file-too-large' | 'too-many-files' | 'invalid-multipart';
 
-declare global {
-  namespace Express {
-    interface Request {
-      documentUploadParsingError?: DocumentUploadParsingError;
-    }
+declare module 'express-serve-static-core' {
+  interface Request {
+    documentUploadParsingError?: DocumentUploadParsingError;
   }
 }
 
