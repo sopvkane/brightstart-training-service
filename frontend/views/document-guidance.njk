@@ -1,0 +1,25 @@
+{% extends "layout.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+
+{% block content %}
+  {{ govukBackLink({
+    text: "Back",
+    href: "/identity-document"
+  }) }}
+
+  <h1 class="govuk-heading-xl">{{ guidance.heading }}</h1>
+  <p class="govuk-body">{{ guidance.introduction }}</p>
+
+  <h2 class="govuk-heading-m">Make sure:</h2>
+  <ul class="govuk-list govuk-list--bullet">
+    {% for requirement in guidance.requirements %}
+      <li>{{ requirement }}</li>
+    {% endfor %}
+  </ul>
+
+  {{ govukButton({
+    text: "Continue",
+    href: "/document-ready"
+  }) }}
+{% endblock %}

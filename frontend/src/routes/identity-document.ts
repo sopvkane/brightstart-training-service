@@ -1,7 +1,7 @@
 import { Router, type Response } from 'express';
 
 import {
-  identityDocumentLabels,
+  identityDocumentDetails,
   isIdentityDocumentType,
   type IdentityDocumentType,
 } from '../domain/identity-document.js';
@@ -22,9 +22,9 @@ function readFormValue(body: unknown, fieldName: string): string {
 }
 
 function documentRadioItems(selectedDocument?: IdentityDocumentType) {
-  return Object.entries(identityDocumentLabels).map(([value, text]) => ({
+  return Object.entries(identityDocumentDetails).map(([value, details]) => ({
     value,
-    text,
+    text: details.label,
     checked: value === selectedDocument,
   }));
 }
@@ -81,25 +81,33 @@ identityDocumentRouter.post('/identity-document', (request, response, next) => {
       return;
     }
 
-    response.redirect(303, '/identity-document-confirmed');
+    response.redirect(303, '/document-guidance');
   });
 });
 
-identityDocumentRouter.get('/identity-document-confirmed', (request, response) => {
+identityDocumentRouter.get('/document-guidance', (request, response) => {
   const journey = request.session.journey;
 
-  if (journey?.selectedAddress === undefined) {
-    response.redirect('/select-address');
-    return;
-  }
-
-  if (journey.identityDocument === undefined) {
+  if (journey?.identityDocument === undefined) {
     response.redirect('/identity-document');
     return;
   }
 
-  response.render('identity-document-confirmed.njk', {
-    pageTitle: 'Identity document selected - BrightStart Training Service',
-    documentName: identityDocumentLabels[journey.identityDocument],
+  const document = identityDocumentDetails[journey.identityDocument];
+
+  response.render('document-guidance.njk', {
+    pageTitle: `${document.guidance.heading} - BrightStart Training Service`,
+    guidance: document.guidance,
+  });
+});
+
+identityDocumentRouter.get('/document-ready', (request, response) => {
+  if (request.session.journey?.identityDocument === undefined) {
+    response.redirect('/identity-document');
+    return;
+  }
+
+  response.render('document-ready.njk', {
+    pageTitle: 'Ready for the next step - BrightStart Training Service',
   });
 });
