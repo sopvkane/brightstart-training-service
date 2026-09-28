@@ -1,0 +1,13 @@
+{% extends "layout.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+
+{% block content %}
+  {{ govukBackLink({
+    text: "Back",
+    href: "/document-guidance"
+  }) }}
+
+  <h1 class="govuk-heading-xl">Ready for the next step</h1>
+  <p class="govuk-body">You have reviewed the guidance for your selected identity document.</p>
+  <p class="govuk-body">No document has been uploaded or verified.</p>
+{% endblock %}

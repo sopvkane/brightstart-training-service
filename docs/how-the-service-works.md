@@ -61,7 +61,7 @@ frontend/
 │   ├── domain/address.ts          describes an address inside the frontend
 │   ├── domain/identity-document.ts defines the supported document choices
 │   ├── routes/address.ts         handles postcode and address-selection requests
-│   ├── routes/identity-document.ts handles document selection and confirmation
+│   ├── routes/identity-document.ts handles document selection and guidance
 │   └── types/express-session.d.ts describes journey state stored in the session
 ├── views/
 │   ├── address.njk               postcode form
@@ -70,12 +70,13 @@ frontend/
 │   ├── form-expired.njk          rejected-form message
 │   ├── address-confirmed.njk     selected-address confirmation
 │   ├── identity-document.njk     identity-document selection form
-│   └── identity-document-confirmed.njk selected-document confirmation
+│   ├── document-guidance.njk     guidance for the selected document
+│   └── document-ready.njk        temporary next-step page
 └── test/
     ├── address.test.ts                 checks browser-facing HTTP behaviour
     ├── address-journey-service.test.ts checks address-selection decisions
     ├── address-api-client.test.ts      checks the frontend-to-API boundary
-    └── identity-document.test.ts       checks document-selection behaviour
+    └── identity-document.test.ts       checks selection and derived guidance
 
 api/src/
 ├── main/java/com/example/brightstart/training/
@@ -95,7 +96,7 @@ api/src/
 
 A `.ts` file is TypeScript, `.njk` is a Nunjucks template and `.java` is Java.
 
-## Follow the postcode and address journey
+## Follow the service journey
 
 1. `GET /address` renders the postcode form from `address.njk`.
 2. The form sends the entered value to `POST /address`.
@@ -119,9 +120,12 @@ A `.ts` file is TypeScript, `.njk` is a Nunjucks template and `.java` is Java.
 13. The form submits one of the supported values to `POST /identity-document`. The route rejects
     missing or unknown values rather than trusting arbitrary form data.
 14. The valid choice is stored alongside the postcode and address in the journey session. A `303`
-    redirect sends the browser to `GET /identity-document-confirmed`.
-15. The confirmation page displays the choice in user-friendly language. It does not claim that a
-    document has been uploaded, checked or verified.
+    redirect sends the browser to `GET /document-guidance`.
+15. The guidance route uses the stored document type to find the matching heading, introduction and
+    requirements in `domain/identity-document.ts`, then renders them as HTML.
+16. Continuing sends the browser to `GET /document-ready`. No extra progress value is stored
+    because the service does not yet need one. The page does not claim that a document was uploaded
+    or verified.
 
 A **session** is state kept on the server for one browser journey. `express-session` gives the
 browser a cookie containing a session identifier; the postcode, address and identity-document
@@ -131,6 +135,22 @@ service has no database.
 The identity-document value is a constrained TypeScript type rather than an arbitrary string. The
 three supported stored values are `passport`, `driving-licence` and `national-identity-card`.
 Friendly labels are used when the choices are displayed to a user.
+
+### Stored state and derived guidance
+
+```mermaid
+flowchart LR
+    StoredChoice[journey.identityDocument] --> GuidanceMapping[Identity-document guidance mapping]
+    GuidanceMapping --> GuidancePage[Rendered guidance page]
+```
+
+The selected document type is **stored state**: it records a fact supplied during this journey.
+The guidance is **derived behaviour**: the frontend can work out what to display from that fact, so
+it does not store a second copy of the guidance in the session. If the document choice changes, the
+same lookup produces the new guidance on the next request.
+
+The route does not read a document type from the guidance page's URL. This prevents a query
+parameter from overriding the trusted choice held in the server-side session.
 
 The default in-memory session store is intentional for local training only. A deployed service
 running more than one frontend instance would need a shared, durable session store so every

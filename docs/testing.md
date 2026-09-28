@@ -80,9 +80,10 @@ npm test --workspace @brightstart/training-frontend -- -t "stores and displays t
 
 The `-t` option selects tests whose names match the text that follows it.
 
-`identity-document.test.ts` checks the document form, constrained-value validation, redirects,
-stored choice and journey prerequisites. These behaviours belong in frontend tests because this
-step uses only the Express session and does not call the Java API.
+`identity-document.test.ts` checks the document form, constrained-value validation, journey
+prerequisites and all three guidance variants. It also proves that guidance comes from the stored
+selection rather than a browser query parameter. These behaviours belong in frontend tests because
+this step uses only the Express session and does not call the Java API.
 
 ## API tests
 
@@ -167,10 +168,11 @@ Playwright UI mode lets you select one test, run it again and inspect each actio
 you finish; Playwright will stop the applications it started.
 
 The browser tests live in `browser-tests/address-journey.spec.ts`. The successful journey covers
-postcode entry, address selection and identity-document selection across the real running
-applications. The tests use labels and roles such as `getByLabel` and `getByRole`, matching how a
-user or assistive technology finds controls. Avoid replacing these with CSS selectors tied to the
-page's visual styling.
+postcode entry, address selection, identity-document selection, passport guidance and the
+temporary next step across the real running applications. Focused frontend tests cover the other
+guidance variants without repeating the entire browser journey. The tests use labels and roles such
+as `getByLabel` and `getByRole`, matching how a user or assistive technology finds controls. Avoid
+replacing these with CSS selectors tied to the page's visual styling.
 
 ### Investigate a browser-test failure
 

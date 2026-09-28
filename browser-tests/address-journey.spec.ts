@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test('selects an address and identity document for a postcode', async ({ page }) => {
+test('follows the journey from postcode to document guidance', async ({ page }) => {
   await page.goto('/');
 
   await page.getByRole('button', { name: 'Start now' }).click();
@@ -19,9 +19,15 @@ test('selects an address and identity document for a postcode', async ({ page })
   await page.getByRole('radio', { name: 'Passport' }).check();
   await page.getByRole('button', { name: 'Continue' }).click();
 
-  await expect(page).toHaveURL('/identity-document-confirmed');
-  await expect(page.getByRole('heading', { name: 'Identity document selected' })).toBeVisible();
-  await expect(page.getByText('You selected Passport.')).toBeVisible();
+  await expect(page).toHaveURL('/document-guidance');
+  await expect(page.getByRole('heading', { name: 'Get your passport ready' })).toBeVisible();
+  await expect(page.getByText('The full page is visible')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Continue' }).click();
+
+  await expect(page).toHaveURL('/document-ready');
+  await expect(page.getByRole('heading', { name: 'Ready for the next step' })).toBeVisible();
+  await expect(page.getByText('No document has been uploaded or verified.')).toBeVisible();
 });
 
 test('shows an error when the postcode is empty', async ({ page }) => {
