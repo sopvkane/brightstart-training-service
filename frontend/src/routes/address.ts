@@ -38,10 +38,10 @@ function renderLookupFailure(response: Response): void {
 export function createAddressRouter(addressJourney: AddressJourney): Router {
   const addressRouter = Router();
 
-  addressRouter.get('/address', (_request, response) => {
+  addressRouter.get('/address', (request, response) => {
     response.render('address.njk', {
       pageTitle: 'What is your postcode? - BrightStart Training Service',
-      postcode: '',
+      postcode: request.session.journey?.postcode ?? '',
     });
   });
 
@@ -59,7 +59,20 @@ export function createAddressRouter(addressJourney: AddressJourney): Router {
       return;
     }
 
-    request.session.journey = { postcode: normalisedPostcode };
+    const currentJourney = request.session.journey;
+    request.session.journey = {
+      postcode: normalisedPostcode,
+      ...(currentJourney?.postcode === normalisedPostcode &&
+      currentJourney.selectedAddress !== undefined
+        ? { selectedAddress: currentJourney.selectedAddress }
+        : {}),
+      ...(currentJourney?.identityDocument === undefined
+        ? {}
+        : { identityDocument: currentJourney.identityDocument }),
+      ...(currentJourney?.documentUpload === undefined
+        ? {}
+        : { documentUpload: currentJourney.documentUpload }),
+    };
 
     request.session.save((error) => {
       if (error) {
@@ -72,7 +85,8 @@ export function createAddressRouter(addressJourney: AddressJourney): Router {
   });
 
   addressRouter.get('/select-address', async (request, response) => {
-    const postcode = request.session.journey?.postcode;
+    const journey = request.session.journey;
+    const postcode = journey?.postcode;
 
     if (postcode === undefined) {
       response.redirect('/address');
@@ -95,7 +109,7 @@ export function createAddressRouter(addressJourney: AddressJourney): Router {
           : 'No addresses found - BrightStart Training Service',
       postcode,
       addresses,
-      addressItems: addressRadioItems(addresses),
+      addressItems: addressRadioItems(addresses, journey?.selectedAddress?.id),
     });
   });
 
@@ -131,6 +145,7 @@ export function createAddressRouter(addressJourney: AddressJourney): Router {
     }
 
     request.session.journey = {
+      ...request.session.journey,
       postcode,
       selectedAddress: selection.selectedAddress,
     };

@@ -68,12 +68,15 @@ frontend/
 │   ├── csrf-protection.ts        protects forms from forged submissions
 │   ├── document-upload-parser.ts parses one in-memory multipart upload
 │   ├── document-upload-client.ts owns upload HTTP communication with the API
+│   ├── check-answers-view-model.ts derives display-ready review values
 │   ├── domain/address.ts          describes an address inside the frontend
 │   ├── domain/identity-document.ts defines the supported document choices
 │   ├── domain/document-upload.ts describes accepted upload metadata
+│   ├── domain/journey.ts          describes the complete frontend journey state
 │   ├── routes/address.ts         handles postcode and address-selection requests
 │   ├── routes/identity-document.ts handles document selection and guidance
 │   ├── routes/document-upload.ts handles upload and confirmation requests
+│   ├── routes/check-answers.ts   handles review and temporary continuation pages
 │   └── types/express-session.d.ts describes journey state stored in the session
 ├── views/
 │   ├── address.njk               postcode form
@@ -85,14 +88,18 @@ frontend/
 │   ├── document-guidance.njk     guidance for the selected document
 │   ├── upload-document.njk       image upload form
 │   ├── document-upload-error.njk unavailable-service message
-│   └── document-uploaded.njk     accepted-upload confirmation
+│   ├── document-uploaded.njk     accepted-upload confirmation
+│   ├── check-your-answers.njk    journey review summary
+│   └── ready-to-submit.njk       temporary continuation page
 └── test/
     ├── address.test.ts                 checks browser-facing HTTP behaviour
     ├── address-journey-service.test.ts checks address-selection decisions
     ├── address-api-client.test.ts      checks the frontend-to-API boundary
     ├── identity-document.test.ts       checks selection and derived guidance
     ├── document-upload.test.ts         checks upload pages and journey state
-    └── document-upload-client.test.ts  checks the multipart API boundary
+    ├── document-upload-client.test.ts  checks the multipart API boundary
+    ├── check-answers-view-model.test.ts checks display-value transformation
+    └── check-answers.test.ts           checks review and state transitions
 
 api/src/
 ├── main/java/com/example/brightstart/training/
@@ -156,6 +163,14 @@ A `.ts` file is TypeScript, `.njk` is a Nunjucks template and `.java` is Java.
     only that metadata in the journey session.
 20. A `303` redirect sends the browser to `GET /document-uploaded`, which confirms that the training
     API accepted the image without claiming that it verified the document or identity.
+21. Continuing sends the browser to `GET /check-your-answers`. The route requires a selected
+    address, identity document and upload receipt, then creates a display-ready view model.
+22. `check-your-answers.njk` uses the GOV.UK summary-list component to show the values and accessible
+    Change links. It receives the view model rather than the raw Express session.
+23. **Confirm and continue** is a link to `GET /ready-to-submit`. Reviewing answers creates no new
+    state, so the service does not add a meaningless POST merely to justify another redirect.
+24. The temporary page says that the answers were reviewed and nothing has been submitted for a
+    decision. There is no final submission or decision behaviour yet.
 
 A **session** is state kept on the server for one browser journey. `express-session` gives the
 browser a cookie containing a session identifier; the postcode, address, identity-document choice
@@ -185,6 +200,32 @@ parameter from overriding the trusted choice held in the server-side session.
 Changing the identity-document choice removes any earlier upload receipt. The old receipt describes
 an image submitted for the previous choice, so retaining it would make the journey state
 inconsistent.
+
+### Stored state and the review page
+
+```mermaid
+flowchart LR
+    JourneyState[Canonical journey state] --> ViewModel[Check-answers view model]
+    ViewModel --> SummaryList[Rendered summary list]
+```
+
+Journey state stores canonical values once: the structured address, an identity-document code and
+the accepted upload receipt. The check-answers view model derives text for display, such as turning
+`driving-licence` into `Driving licence`. The session does not need duplicate labels that could
+become inconsistent with the domain mapping.
+
+The state dependencies are deliberately narrow:
+
+```text
+postcode → selected address
+identity document → document upload
+```
+
+Changing a postcode invalidates its selected address. Selecting another address does not invalidate
+the identity document or upload because neither depends on the address. Changing the identity
+document invalidates the old upload, while reselecting the same document preserves it. Uploading a
+replacement changes only the receipt. These rules clear state because of a real dependency, not
+simply because one step appears earlier on the screen.
 
 The default in-memory session store is intentional for local training only. A deployed service
 running more than one frontend instance would need a shared, durable session store so every

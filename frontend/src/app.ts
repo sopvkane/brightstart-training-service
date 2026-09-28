@@ -13,6 +13,7 @@ import { parseDocumentUpload } from './document-upload-parser.js';
 import { createAddressRouter } from './routes/address.js';
 import { beforeYouStartRouter } from './routes/before-you-start.js';
 import { createDocumentUploadRouter } from './routes/document-upload.js';
+import { checkAnswersRouter } from './routes/check-answers.js';
 import { homeRouter } from './routes/home.js';
 import { identityDocumentRouter } from './routes/identity-document.js';
 
@@ -102,6 +103,7 @@ export function createApplication(options: ApplicationOptions = {}): Express {
   application.use('/', createAddressRouter(addressJourney));
   application.use('/', identityDocumentRouter);
   application.use('/', createDocumentUploadRouter(documentUploadClient));
+  application.use('/', checkAnswersRouter);
 
   return application;
 }

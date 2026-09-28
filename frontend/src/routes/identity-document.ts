@@ -71,10 +71,14 @@ identityDocumentRouter.post('/identity-document', (request, response, next) => {
   }
 
   const updatedJourney = {
-    postcode: journey.postcode,
-    selectedAddress: journey.selectedAddress,
+    ...journey,
     identityDocument: submittedDocument,
   };
+
+  if (journey.identityDocument !== submittedDocument) {
+    delete updatedJourney.documentUpload;
+  }
+
   request.session.journey = updatedJourney;
 
   request.session.save((error) => {
