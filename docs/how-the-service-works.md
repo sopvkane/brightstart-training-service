@@ -21,23 +21,29 @@ such as `/address` identifies the requested behaviour. The method describes the 
 ## Request path at a glance
 
 ```mermaid
-flowchart LR
-    Browser --> FrontendRoute[Frontend route]
-    FrontendRoute --> ApiClient[Frontend API client]
-    ApiClient --> JavaController[Java controller]
-    JavaController --> LookupService[Address lookup service]
-    LookupService --> SyntheticData[Synthetic address data]
-    SyntheticData --> LookupService
-    LookupService --> JavaController
-    JavaController --> ApiClient
-    ApiClient --> FrontendRoute
-    FrontendRoute --> Browser
+flowchart TD
+    Browser[Browser]
+    FrontendRoute[Express route]
+    JourneyService[Address journey service]
+    ApiClient[Address API client]
+    JavaController[Spring REST controller]
+    LookupService[Address lookup service]
+    SyntheticSource[Synthetic address source]
+
+    Browser -->|HTTP: HTML and forms| FrontendRoute
+    FrontendRoute --> JourneyService
+    JourneyService --> ApiClient
+    ApiClient -->|HTTP: REST and JSON| JavaController
+    JavaController --> LookupService
+    LookupService --> SyntheticSource
 ```
 
-The browser never calls the Java API during the journey. It submits the postcode to the frontend,
-which keeps journey state in a session and calls the API on the user's behalf. The API looks up
-fixed fictional data and sends JSON back. The frontend uses that response to produce HTML for the
-browser.
+The server-rendered Express frontend is the browser-facing application. The browser exchanges HTTP
+requests, HTML pages and form data with Express. It never needs to call the Java API directly.
+
+Express calls the Java API on the browser's behalf across a second HTTP boundary. That boundary
+uses a REST endpoint and exchanges JSON rather than HTML. The API looks up fixed fictional data,
+then the frontend uses the JSON response to produce the next HTML page for the browser.
 
 The diagram is a map, not a replacement for the code. Follow the numbered steps below when you
 need to understand where a value changes or an error begins.
@@ -49,8 +55,10 @@ frontend/
 ├── src/
 │   ├── server.ts                 starts the HTTP server
 │   ├── app.ts                    configures the frontend and its dependencies
-│   ├── address-api-client.ts     calls and checks the Java address API
+│   ├── address-journey-service.ts coordinates address journey decisions
+│   ├── address-api-client.ts     owns HTTP communication with the Java API
 │   ├── csrf-protection.ts        protects forms from forged submissions
+│   ├── domain/address.ts          describes an address inside the frontend
 │   ├── routes/address.ts         handles postcode and address-selection requests
 │   └── types/express-session.d.ts describes journey state stored in the session
 ├── views/
@@ -60,8 +68,9 @@ frontend/
 │   ├── form-expired.njk          rejected-form message
 │   └── address-confirmed.njk     selected-address confirmation
 └── test/
-    ├── address.test.ts            checks the browser journey over HTTP
-    └── address-api-client.test.ts checks the frontend-to-API boundary
+    ├── address.test.ts                 checks browser-facing HTTP behaviour
+    ├── address-journey-service.test.ts checks address-selection decisions
+    └── address-api-client.test.ts      checks the frontend-to-API boundary
 
 api/src/
 ├── main/java/com/example/brightstart/training/
@@ -69,7 +78,9 @@ api/src/
 │   ├── health/                      contains the health endpoint
 │   └── address/
 │       ├── AddressController.java   handles GET /api/addresses
-│       ├── AddressLookupService.java chooses the synthetic result
+│       ├── AddressLookupService.java coordinates lookup behaviour
+│       ├── SyntheticAddressSource.java owns the fixed training data
+│       ├── AddressApiExceptionHandler.java produces safe API errors
 │       ├── Address.java             describes one address
 │       └── AddressLookupResponse.java describes the JSON response
 └── test/java/com/example/brightstart/training/
@@ -85,21 +96,28 @@ A `.ts` file is TypeScript, `.njk` is a Nunjucks template and `.java` is Java.
 2. The form sends the entered value to `POST /address`.
 3. The route trims the value, changes letters to uppercase and stores the postcode in the session.
 4. A `303` redirect asks the browser to make a new `GET /select-address` request.
-5. The selection route reads the postcode from the session and asks `address-api-client.ts` for
+5. The selection route reads the postcode from the session and asks `AddressJourneyService` for
    addresses.
-6. The client sends `GET /api/addresses?postcode=...` to the Java API.
+6. The journey service asks `address-api-client.ts`, which sends
+   `GET /api/addresses?postcode=...` to the Java API.
 7. `AddressController` passes the postcode to `AddressLookupService`.
-8. The service returns the matching fictional addresses. Spring **serialises** the Java records,
-   converting them into JSON for the HTTP response.
-9. The frontend checks the response and renders the addresses as radio buttons, allowing one
-   choice.
-10. `POST /select-address` checks that the submitted ID belongs to an address returned by the API,
-    then stores that complete address in the session.
-11. A final `303` redirect displays the stored address at `GET /address-confirmed`.
+8. The service normalises the postcode and asks `SyntheticAddressSource` for the fixed training
+   data. Spring **serialises** the returned Java records, converting them into JSON.
+9. The API client validates that JSON before returning frontend domain addresses. The route renders
+   them as radio buttons.
+10. For `POST /select-address`, the journey service looks up the current results again and accepts
+    only the canonical address whose ID matches the submitted ID.
+11. The route stores that complete address in the session, then a `303` redirect displays it at
+    `GET /address-confirmed`.
 
 A **session** is state kept on the server for one browser journey. `express-session` gives the
 browser a cookie containing a session identifier; the postcode and address remain in frontend
 memory. Restarting the frontend clears them because this training service has no database.
+
+The default in-memory session store is intentional for local training only. A deployed service
+running more than one frontend instance would need a shared, durable session store so every
+instance could read the same journey state. This repository does not add that infrastructure before
+the training journey needs it.
 
 Each form also contains a hidden **cross-site request forgery (CSRF) token**. The frontend stores a
 matching token in the session and checks it before accepting a form submission. Another website
@@ -130,7 +148,8 @@ The frontend requests `GET /api/addresses?postcode=BT9%207EP`. A successful resp
 
 That agreed response shape is an **API contract**. The Java records define what the API sends, and
 the TypeScript types plus response checks define what the frontend accepts. No match is still a
-successful response with an empty array. The controlled failure returns HTTP status `503` instead.
+successful response with an empty array. The controlled failure returns HTTP status `503` and an
+RFC 9457 Problem Details body with a safe public explanation instead.
 
 ## Follow a failure
 
@@ -180,19 +199,22 @@ terminal. Remove temporary diagnostic output before committing unless it has a l
 `app.ts` configures Express without opening a port, while `server.ts` starts the real server. Tests
 can therefore use the configured application without competing for port 3000.
 
-`address-api-client.ts` owns HTTP communication and response checking. The route owns browser
-behaviour and session state. In tests, a small replacement client returns a chosen result so route
-tests remain reliable without a Java process. This is a boundary with a concrete purpose, not a
-general layer for every function.
+The route owns browser HTTP behaviour and session state. `AddressJourneyService` owns the journey's
+lookup and selection decisions without depending on Express. `address-api-client.ts` owns HTTP
+communication, timeouts and response checking. Route tests replace the journey-service boundary,
+so they remain reliable without a Java process. Each boundary exists for a concrete responsibility;
+there is no generic service framework.
 
-The API has a controller and a service because they answer different questions: the controller
-defines the HTTP contract; the service decides which addresses a postcode produces. There is no
-repository or database abstraction because no persistent data source exists.
+The API controller defines the HTTP contract, the lookup service normalises input and coordinates
+the lookup, and the concrete synthetic source owns the fixed training data. There is no source
+interface or repository abstraction because there is only one in-memory data source and no
+persistent database.
 
 ## Configuration
 
-The frontend calls `http://localhost:8080` by default. Set `ADDRESS_API_BASE_URL` only when the API
-really runs elsewhere. No configuration framework or API key is required.
+The API client calls `http://localhost:8080` by default and stops waiting after three seconds. Set
+`ADDRESS_API_BASE_URL` only when the API really runs elsewhere. No configuration framework or API
+key is required.
 
 GOV.UK Frontend supplies accessible components and styles, but the service uses its own generic
 branding. Node module resolution locates the installed package whether npm places it in the

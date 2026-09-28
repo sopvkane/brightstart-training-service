@@ -1,11 +1,15 @@
 import 'express-session';
 
-import type { Address } from '../address-api-client.js';
+import type { Address } from '../domain/address.js';
+
+type JourneyState = {
+  postcode: string;
+  selectedAddress?: Address;
+};
 
 declare module 'express-session' {
   interface SessionData {
     csrfToken?: string;
-    postcode?: string;
-    selectedAddress?: Address;
+    journey?: JourneyState;
   }
 }

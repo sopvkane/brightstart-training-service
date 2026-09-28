@@ -5,7 +5,8 @@ import express, { type Express } from 'express';
 import session from 'express-session';
 import nunjucks from 'nunjucks';
 
-import { createAddressLookupClient, type AddressLookupClient } from './address-api-client.js';
+import { createAddressLookupClient } from './address-api-client.js';
+import { type AddressJourney, AddressJourneyService } from './address-journey-service.js';
 import { addCsrfTokenToViews, protectAgainstCsrf } from './csrf-protection.js';
 import { createAddressRouter } from './routes/address.js';
 import { beforeYouStartRouter } from './routes/before-you-start.js';
@@ -36,16 +37,15 @@ function getSessionSecret(): string {
 }
 
 type ApplicationOptions = {
-  addressLookupClient?: AddressLookupClient;
+  addressJourney?: AddressJourney;
 };
 
 export function createApplication(options: ApplicationOptions = {}): Express {
   const application = express();
   const frontendDirectory = path.resolve(import.meta.dirname, '..');
   const govukFrontendDistributionDirectory = resolveGovukFrontendDistributionDirectory();
-  const addressLookupClient =
-    options.addressLookupClient ??
-    createAddressLookupClient(process.env.ADDRESS_API_BASE_URL ?? 'http://localhost:8080');
+  const addressJourney =
+    options.addressJourney ?? new AddressJourneyService(createAddressLookupClient());
 
   application.disable('x-powered-by');
 
@@ -90,7 +90,7 @@ export function createApplication(options: ApplicationOptions = {}): Express {
 
   application.use('/', homeRouter);
   application.use('/before-you-start', beforeYouStartRouter);
-  application.use('/', createAddressRouter(addressLookupClient));
+  application.use('/', createAddressRouter(addressJourney));
 
   return application;
 }
