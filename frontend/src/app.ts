@@ -8,8 +8,11 @@ import nunjucks from 'nunjucks';
 import { createAddressLookupClient } from './address-api-client.js';
 import { type AddressJourney, AddressJourneyService } from './address-journey-service.js';
 import { addCsrfTokenToViews, protectAgainstCsrf } from './csrf-protection.js';
+import { createDocumentUploadClient, type DocumentUploadClient } from './document-upload-client.js';
+import { parseDocumentUpload } from './document-upload-parser.js';
 import { createAddressRouter } from './routes/address.js';
 import { beforeYouStartRouter } from './routes/before-you-start.js';
+import { createDocumentUploadRouter } from './routes/document-upload.js';
 import { homeRouter } from './routes/home.js';
 import { identityDocumentRouter } from './routes/identity-document.js';
 
@@ -39,6 +42,7 @@ function getSessionSecret(): string {
 
 type ApplicationOptions = {
   addressJourney?: AddressJourney;
+  documentUploadClient?: DocumentUploadClient;
 };
 
 export function createApplication(options: ApplicationOptions = {}): Express {
@@ -47,6 +51,7 @@ export function createApplication(options: ApplicationOptions = {}): Express {
   const govukFrontendDistributionDirectory = resolveGovukFrontendDistributionDirectory();
   const addressJourney =
     options.addressJourney ?? new AddressJourneyService(createAddressLookupClient());
+  const documentUploadClient = options.documentUploadClient ?? createDocumentUploadClient();
 
   application.disable('x-powered-by');
 
@@ -86,6 +91,9 @@ export function createApplication(options: ApplicationOptions = {}): Express {
     );
   });
 
+  // Multipart fields must be parsed before the existing CSRF middleware can read the hidden token.
+  // This parser runs only for the upload POST and keeps the file in memory rather than on disk.
+  application.post('/upload-document', parseDocumentUpload);
   application.use(protectAgainstCsrf);
   application.use(addCsrfTokenToViews);
 
@@ -93,6 +101,7 @@ export function createApplication(options: ApplicationOptions = {}): Express {
   application.use('/before-you-start', beforeYouStartRouter);
   application.use('/', createAddressRouter(addressJourney));
   application.use('/', identityDocumentRouter);
+  application.use('/', createDocumentUploadRouter(documentUploadClient));
 
   return application;
 }

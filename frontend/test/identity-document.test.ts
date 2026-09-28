@@ -140,7 +140,7 @@ describe('identity document and guidance journey', () => {
     expect(response.text).toMatch(/<input[^>]+value="national-identity-card"[^>]+checked/);
   });
 
-  it('displays passport guidance and continues to the temporary next step', async () => {
+  it('displays passport guidance and continues to document upload', async () => {
     const browser = request.agent(createApplication({ addressJourney }));
     await reachAddressConfirmation(browser);
     await selectDocument(browser, 'passport');
@@ -151,12 +151,7 @@ describe('identity document and guidance journey', () => {
     expect(guidanceResponse.text).toContain('Get your passport ready');
     expect(guidanceResponse.text).toContain('photo and details page of your passport');
     expect(guidanceResponse.text).toContain('The full page is visible');
-    expect(guidanceResponse.text).toContain('href="/document-ready"');
-
-    const readyResponse = await browser.get('/document-ready');
-    expect(readyResponse.status).toBe(200);
-    expect(readyResponse.text).toContain('Ready for the next step');
-    expect(readyResponse.text).toContain('No document has been uploaded or verified.');
+    expect(guidanceResponse.text).toContain('href="/upload-document"');
   });
 
   it('displays national identity card guidance', async () => {
@@ -205,13 +200,10 @@ describe('identity document and guidance journey', () => {
 
     const selectionResponse = await browser.get('/identity-document');
     const guidanceResponse = await browser.get('/document-guidance');
-    const readyResponse = await browser.get('/document-ready');
 
     expect(selectionResponse.status).toBe(302);
     expect(selectionResponse.headers.location).toBe('/select-address');
     expect(guidanceResponse.status).toBe(302);
     expect(guidanceResponse.headers.location).toBe('/identity-document');
-    expect(readyResponse.status).toBe(302);
-    expect(readyResponse.headers.location).toBe('/identity-document');
   });
 });

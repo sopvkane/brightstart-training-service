@@ -1,6 +1,8 @@
 import { expect, test } from '@playwright/test';
 
-test('follows the journey from postcode to document guidance', async ({ page }) => {
+import { syntheticJpeg } from './fixtures/synthetic-document.js';
+
+test('follows the journey from postcode to document upload', async ({ page }) => {
   await page.goto('/');
 
   await page.getByRole('button', { name: 'Start now' }).click();
@@ -25,9 +27,14 @@ test('follows the journey from postcode to document guidance', async ({ page }) 
 
   await page.getByRole('button', { name: 'Continue' }).click();
 
-  await expect(page).toHaveURL('/document-ready');
-  await expect(page.getByRole('heading', { name: 'Ready for the next step' })).toBeVisible();
-  await expect(page.getByText('No document has been uploaded or verified.')).toBeVisible();
+  await expect(page).toHaveURL('/upload-document');
+  await page.getByLabel('Choose an image').setInputFiles(syntheticJpeg);
+  await page.getByRole('button', { name: 'Upload and continue' }).click();
+
+  await expect(page).toHaveURL('/document-uploaded');
+  await expect(page.getByRole('heading', { name: 'Document image accepted' })).toBeVisible();
+  await expect(page.getByText('synthetic-training-document.jpg')).toBeVisible();
+  await expect(page.getByText(/has not been used to verify your identity/)).toBeVisible();
 });
 
 test('shows an error when the postcode is empty', async ({ page }) => {

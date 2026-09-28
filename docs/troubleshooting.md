@@ -120,6 +120,17 @@ ADDRESS_API_BASE_URL=http://localhost:8081 npm run dev:frontend
 Use the environment-variable syntax for your shell if you are using Windows. Do not change the
 application's default merely to work around an API process that has stopped.
 
+## The page says it could not upload your image
+
+The frontend sends the selected training image to the Java API. Check that the API terminal is
+running and that <http://localhost:8080/api/health> returns `{"status":"UP"}`. Then check that the
+file is one JPEG or PNG image that is 5 MB or smaller.
+
+Renaming a text file to end in `.jpg` does not turn it into a JPEG. The API checks the file's leading
+bytes instead of trusting its name or the media type reported by the browser. Use only a synthetic
+training image, never a real identity document. If the API terminal shows an unexpected failure,
+record the first meaningful error before retrying.
+
 ## Browser tests cannot find Chromium
 
 Playwright needs its own known browser version. Installing the Node.js dependencies does not

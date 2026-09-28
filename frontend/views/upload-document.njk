@@ -1,0 +1,47 @@
+{% extends "layout.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/file-upload/macro.njk" import govukFileUpload %}
+
+{% block content %}
+  {{ govukBackLink({
+    text: "Back",
+    href: "/document-guidance"
+  }) }}
+
+  {% if errors %}
+    {{ govukErrorSummary({
+      titleText: "There is a problem",
+      errorList: errors
+    }) }}
+  {% endif %}
+
+  <form method="post" action="/upload-document" enctype="multipart/form-data" novalidate>
+    <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+
+    <h1 class="govuk-heading-xl">Upload your {{ documentName | lower }}</h1>
+    <p class="govuk-body">{{ uploadInstruction }}</p>
+
+    {{ govukFileUpload({
+      id: "document",
+      name: "document",
+      label: {
+        text: "Choose an image"
+      },
+      hint: {
+        text: "Upload one JPEG or PNG file. The file must be " + maximumFileSizeMegabytes + " MB or smaller."
+      },
+      attributes: {
+        accept: "image/jpeg,image/png"
+      },
+      errorMessage: {
+        text: uploadError
+      } if uploadError
+    }) }}
+
+    {{ govukButton({
+      text: "Upload and continue"
+    }) }}
+  </form>
+{% endblock %}

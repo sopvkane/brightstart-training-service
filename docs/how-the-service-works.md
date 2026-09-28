@@ -29,6 +29,10 @@ flowchart TD
     JavaController[Spring REST controller]
     LookupService[Address lookup service]
     SyntheticSource[Synthetic address source]
+    UploadRoute[Express upload route]
+    UploadClient[Document upload client]
+    UploadController[Spring upload controller]
+    UploadService[Document upload service]
 
     Browser -->|HTTP: HTML and forms| FrontendRoute
     FrontendRoute --> JourneyService
@@ -36,6 +40,10 @@ flowchart TD
     ApiClient -->|HTTP: REST and JSON| JavaController
     JavaController --> LookupService
     LookupService --> SyntheticSource
+    Browser -->|HTTP: multipart form| UploadRoute
+    UploadRoute --> UploadClient
+    UploadClient -->|HTTP: multipart form| UploadController
+    UploadController --> UploadService
 ```
 
 The server-rendered Express frontend is the browser-facing application. The browser exchanges HTTP
@@ -58,10 +66,14 @@ frontend/
 │   ├── address-journey-service.ts coordinates address journey decisions
 │   ├── address-api-client.ts     owns HTTP communication with the Java API
 │   ├── csrf-protection.ts        protects forms from forged submissions
+│   ├── document-upload-parser.ts parses one in-memory multipart upload
+│   ├── document-upload-client.ts owns upload HTTP communication with the API
 │   ├── domain/address.ts          describes an address inside the frontend
 │   ├── domain/identity-document.ts defines the supported document choices
+│   ├── domain/document-upload.ts describes accepted upload metadata
 │   ├── routes/address.ts         handles postcode and address-selection requests
 │   ├── routes/identity-document.ts handles document selection and guidance
+│   ├── routes/document-upload.ts handles upload and confirmation requests
 │   └── types/express-session.d.ts describes journey state stored in the session
 ├── views/
 │   ├── address.njk               postcode form
@@ -71,27 +83,37 @@ frontend/
 │   ├── address-confirmed.njk     selected-address confirmation
 │   ├── identity-document.njk     identity-document selection form
 │   ├── document-guidance.njk     guidance for the selected document
-│   └── document-ready.njk        temporary next-step page
+│   ├── upload-document.njk       image upload form
+│   ├── document-upload-error.njk unavailable-service message
+│   └── document-uploaded.njk     accepted-upload confirmation
 └── test/
     ├── address.test.ts                 checks browser-facing HTTP behaviour
     ├── address-journey-service.test.ts checks address-selection decisions
     ├── address-api-client.test.ts      checks the frontend-to-API boundary
-    └── identity-document.test.ts       checks selection and derived guidance
+    ├── identity-document.test.ts       checks selection and derived guidance
+    ├── document-upload.test.ts         checks upload pages and journey state
+    └── document-upload-client.test.ts  checks the multipart API boundary
 
 api/src/
 ├── main/java/com/example/brightstart/training/
 │   ├── TrainingApiApplication.java starts Spring Boot
 │   ├── health/                      contains the health endpoint
-│   └── address/
+│   ├── address/
 │       ├── AddressController.java   handles GET /api/addresses
 │       ├── AddressLookupService.java coordinates lookup behaviour
 │       ├── SyntheticAddressSource.java owns the fixed training data
 │       ├── AddressApiExceptionHandler.java produces safe API errors
 │       ├── Address.java             describes one address
 │       └── AddressLookupResponse.java describes the JSON response
+│   └── documentupload/
+│       ├── DocumentUploadController.java handles POST /api/document-uploads
+│       ├── DocumentUploadService.java validates document type, size and content
+│       ├── DocumentUploadReceipt.java describes accepted upload metadata
+│       └── DocumentUploadExceptionHandler.java produces safe API errors
 └── test/java/com/example/brightstart/training/
     ├── health/HealthControllerTest.java
-    └── address/AddressControllerTest.java
+    ├── address/AddressControllerTest.java
+    └── documentupload/DocumentUploadControllerTest.java
 ```
 
 A `.ts` file is TypeScript, `.njk` is a Nunjucks template and `.java` is Java.
@@ -123,14 +145,22 @@ A `.ts` file is TypeScript, `.njk` is a Nunjucks template and `.java` is Java.
     redirect sends the browser to `GET /document-guidance`.
 15. The guidance route uses the stored document type to find the matching heading, introduction and
     requirements in `domain/identity-document.ts`, then renders them as HTML.
-16. Continuing sends the browser to `GET /document-ready`. No extra progress value is stored
-    because the service does not yet need one. The page does not claim that a document was uploaded
-    or verified.
+16. Continuing sends the browser to `GET /upload-document`. The page shows one file input and sends
+    the form as `multipart/form-data` to `POST /upload-document`.
+17. The frontend multipart parser accepts one file of at most 5 MB in memory. The upload route sends
+    the selected document type and bytes to the Java API through `document-upload-client.ts`.
+18. `DocumentUploadController` passes the multipart request to `DocumentUploadService`. The service
+    checks the document type, size and leading JPEG or PNG bytes rather than trusting the filename
+    or browser-supplied media type.
+19. The API returns a small JSON receipt. The frontend client validates it, and the route stores
+    only that metadata in the journey session.
+20. A `303` redirect sends the browser to `GET /document-uploaded`, which confirms that the training
+    API accepted the image without claiming that it verified the document or identity.
 
 A **session** is state kept on the server for one browser journey. `express-session` gives the
-browser a cookie containing a session identifier; the postcode, address and identity-document
-choice remain in frontend memory. Restarting the frontend clears them because this training
-service has no database.
+browser a cookie containing a session identifier; the postcode, address, identity-document choice
+and upload receipt remain in frontend memory. Raw file bytes are never placed in the session.
+Restarting the frontend clears its journey state because this training service has no database.
 
 The identity-document value is a constrained TypeScript type rather than an arbitrary string. The
 three supported stored values are `passport`, `driving-licence` and `national-identity-card`.
@@ -151,6 +181,10 @@ same lookup produces the new guidance on the next request.
 
 The route does not read a document type from the guidance page's URL. This prevents a query
 parameter from overriding the trusted choice held in the server-side session.
+
+Changing the identity-document choice removes any earlier upload receipt. The old receipt describes
+an image submitted for the previous choice, so retaining it would make the journey state
+inconsistent.
 
 The default in-memory session store is intentional for local training only. A deployed service
 running more than one frontend instance would need a shared, durable session store so every
@@ -189,6 +223,35 @@ the TypeScript types plus response checks define what the frontend accepts. No m
 successful response with an empty array. The controlled failure returns HTTP status `503` and an
 RFC 9457 Problem Details body with a safe public explanation instead.
 
+## The document upload API contract
+
+`multipart/form-data` is an HTTP request format that sends named text fields and file data together.
+The frontend sends `documentType` and one field named `document` to
+`POST /api/document-uploads`. The HTTP implementation creates the multipart boundary; application
+code must not invent or hard-code it.
+
+The API is the authoritative validation boundary because browser hints and frontend checks can be
+bypassed. A filename and a browser-supplied media type are user-controlled metadata, not proof of
+the file's contents. The deliberately narrow API check recognises only the standard leading bytes
+for JPEG and PNG images. It is suitable for this learning exercise, not a general file inspection
+or malware-scanning system.
+
+A successful response has this shape:
+
+```json
+{
+  "uploadId": "a generated identifier",
+  "fileName": "synthetic-passport.jpg",
+  "contentType": "image/jpeg",
+  "size": 4
+}
+```
+
+The receipt contains metadata only. The API validates the bytes in memory and does not keep them in
+a database, filesystem or object store. A real document service would need access controls,
+malware scanning, retention rules and dedicated durable object storage. This training service must
+not be treated as production document storage.
+
 ## Follow a failure
 
 Different outcomes have deliberately different meanings:
@@ -203,7 +266,12 @@ Different outcomes have deliberately different meanings:
 | Continue without choosing an address | Frontend validation error                      |
 | Continue without choosing a document | Frontend validation error                      |
 | Submit an unknown document value     | Same safe document-selection validation error  |
+| Upload no image                      | Frontend validation error                      |
+| Upload more than one image           | Frontend validation error                      |
+| Upload an image larger than 5 MB     | `413 Payload Too Large` with a safe error      |
+| Upload content that is not JPEG/PNG  | `415 Unsupported Media Type` with a safe error |
 | Stop the API before searching        | Frontend displays the unavailable-service page |
+| Stop the API before uploading        | Frontend displays the upload unavailable page  |
 
 The controlled failure is fixed rather than random, so learners and tests can reproduce it. No
 postcode is sent to an external service and none of these results comes from real address data.
@@ -216,7 +284,9 @@ boundary rather than being displayed to the user.
 
 The `bruno` folder contains local requests for health, multiple addresses, one address, no results
 and the controlled failure. Bruno is an API client: it lets you send a request and inspect the raw
-response without going through the frontend.
+response without going through the frontend. The collection does not include document upload:
+committing a portable image fixture solely for Bruno would duplicate the tiny fixture generated by
+the automated tests, while a machine-specific file path would not work for another learner.
 
 Start the Java API, open the `bruno` folder as a collection in the Bruno application, then run one
 request. Compare its URL, status and JSON with `AddressControllerTest`. The collection contains no
@@ -245,6 +315,11 @@ communication, timeouts and response checking. Route tests replace the journey-s
 so they remain reliable without a Java process. Each boundary exists for a concrete responsibility;
 there is no generic service framework.
 
+The upload parser owns the browser-facing multipart limit. The document-upload client owns the
+second multipart request and validates the receipt before it crosses into journey state. The Java
+upload service owns authoritative content validation. These are separate because each is a real
+boundary where untrusted data changes form, not because every operation needs another layer.
+
 The API controller defines the HTTP contract, the lookup service normalises input and coordinates
 the lookup, and the concrete synthetic source owns the fixed training data. There is no source
 interface or repository abstraction because there is only one in-memory data source and no
@@ -252,9 +327,9 @@ persistent database.
 
 ## Configuration
 
-The API client calls `http://localhost:8080` by default and stops waiting after three seconds. Set
-`ADDRESS_API_BASE_URL` only when the API really runs elsewhere. No configuration framework or API
-key is required.
+The API clients call `http://localhost:8080` by default. Address requests stop waiting after three
+seconds and upload requests after five seconds. Set `ADDRESS_API_BASE_URL` only when the API really
+runs elsewhere. No configuration framework or API key is required.
 
 GOV.UK Frontend supplies accessible components and styles, but the service uses its own generic
 branding. Node module resolution locates the installed package whether npm places it in the

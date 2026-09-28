@@ -1,0 +1,14 @@
+{% extends "layout.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+
+{% block content %}
+  {{ govukBackLink({
+    text: "Back",
+    href: "/upload-document"
+  }) }}
+
+  <h1 class="govuk-heading-xl">Document image accepted</h1>
+  <p class="govuk-body">The training service accepted the image for your {{ documentName | lower }}.</p>
+  <p class="govuk-body">File: {{ upload.fileName }}</p>
+  <p class="govuk-body">The image has not been used to verify your identity or check whether the document is authentic.</p>
+{% endblock %}

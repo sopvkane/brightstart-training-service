@@ -100,9 +100,13 @@ Return to <http://localhost:3000>, select **Start now** and enter one of these t
 - any other postcode returns no addresses.
 
 Choose an address, then select which type of identity document you would have available in this
-fictional journey. The addresses are fixed training data: the service never contacts a real address
-provider. After selecting a document, you will see guidance for getting it ready. These steps do
-not collect, upload or verify any document details.
+fictional journey. After reading the guidance, upload a JPEG or PNG image that contains no real
+identity or personal information. The service will confirm that the training API accepted the
+image; it does not verify identity or check whether a document is authentic.
+
+The addresses are fixed training data, so the service never contacts a real address provider. The
+uploaded image is validated in memory and is not placed in production-grade document storage. Use
+only a synthetic image that you created for training.
 
 Stop either application by returning to its terminal and pressing <kbd>Ctrl</kbd>+<kbd>C</kbd>.
 
@@ -120,8 +124,9 @@ Your browser → Frontend application → Java API application
                   localhost:3000       localhost:8080
 ```
 
-The browser sends page requests and form submissions to the frontend. When an address is needed,
-the frontend asks the Java API for fictional address data. Follow
+The browser sends page requests, form submissions and the selected training image to the frontend.
+The frontend asks the Java API for fictional address data and sends the image there for validation.
+Follow
 [how the service works](docs/how-the-service-works.md) to trace that request through both
 applications.
 
