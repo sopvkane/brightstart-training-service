@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 import { syntheticJpeg } from './fixtures/synthetic-document.js';
 
-test('follows the journey from postcode to document upload', async ({ page }) => {
+test('follows the journey from postcode to reviewing the answers', async ({ page }) => {
   await page.goto('/');
 
   await page.getByRole('button', { name: 'Start now' }).click();
@@ -35,6 +35,22 @@ test('follows the journey from postcode to document upload', async ({ page }) =>
   await expect(page.getByRole('heading', { name: 'Document image accepted' })).toBeVisible();
   await expect(page.getByText('synthetic-training-document.jpg')).toBeVisible();
   await expect(page.getByText(/has not been used to verify your identity/)).toBeVisible();
+
+  await page.getByRole('button', { name: 'Continue' }).click();
+
+  await expect(page).toHaveURL('/check-your-answers');
+  await expect(page.getByRole('heading', { name: 'Check your answers' })).toBeVisible();
+  await expect(
+    page.getByText(/2 Pair Programming Place, Learning Quarter, Belfast, BT9 7EP/),
+  ).toBeVisible();
+  await expect(page.getByText('Passport', { exact: true })).toBeVisible();
+  await expect(page.getByText('synthetic-training-document.jpg (JPEG)')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Confirm and continue' }).click();
+
+  await expect(page).toHaveURL('/ready-to-submit');
+  await expect(page.getByRole('heading', { name: 'Ready to submit' })).toBeVisible();
+  await expect(page.getByText('Nothing has been submitted for a decision.')).toBeVisible();
 });
 
 test('shows an error when the postcode is empty', async ({ page }) => {

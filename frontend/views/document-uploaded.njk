@@ -1,5 +1,6 @@
 {% extends "layout.njk" %}
 {% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
 
 {% block content %}
   {{ govukBackLink({
@@ -11,4 +12,9 @@
   <p class="govuk-body">The training service accepted the image for your {{ documentName | lower }}.</p>
   <p class="govuk-body">File: {{ upload.fileName }}</p>
   <p class="govuk-body">The image has not been used to verify your identity or check whether the document is authentic.</p>
+
+  {{ govukButton({
+    text: "Continue",
+    href: "/check-your-answers"
+  }) }}
 {% endblock %}

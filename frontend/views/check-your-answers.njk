@@ -1,0 +1,56 @@
+{% extends "layout.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/summary-list/macro.njk" import govukSummaryList %}
+
+{% block content %}
+  {{ govukBackLink({
+    text: "Back",
+    href: "/document-uploaded"
+  }) }}
+
+  <h1 class="govuk-heading-xl">Check your answers</h1>
+
+  {{ govukSummaryList({
+    rows: [
+      {
+        key: { text: "Address" },
+        value: { text: answers.address },
+        actions: {
+          items: [{
+            href: "/address",
+            text: "Change",
+            visuallyHiddenText: "address"
+          }]
+        }
+      },
+      {
+        key: { text: "Identity document" },
+        value: { text: answers.identityDocument },
+        actions: {
+          items: [{
+            href: "/identity-document",
+            text: "Change",
+            visuallyHiddenText: "identity document"
+          }]
+        }
+      },
+      {
+        key: { text: "Uploaded document" },
+        value: { text: answers.uploadedDocument },
+        actions: {
+          items: [{
+            href: "/upload-document",
+            text: "Change",
+            visuallyHiddenText: "uploaded document"
+          }]
+        }
+      }
+    ]
+  }) }}
+
+  {{ govukButton({
+    text: "Confirm and continue",
+    href: "/ready-to-submit"
+  }) }}
+{% endblock %}

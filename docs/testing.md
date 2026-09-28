@@ -90,6 +90,11 @@ the visible validation, size and single-file limits, redirect and stored receipt
 using a real identity document. `document-upload-client.test.ts` checks the separate HTTP boundary:
 multipart field names, receipt validation, controlled API responses, network failures and timeout.
 
+`check-answers-view-model.test.ts` checks the meaningful transformation from canonical state to
+display text. `check-answers.test.ts` checks the rendered summary, prerequisite redirects and the
+state transitions behind Change actions. Keeping those combinations at the route layer makes a
+failure easier to locate than repeating every state transition through the full browser journey.
+
 ## API tests
 
 From the repository root:
@@ -179,11 +184,11 @@ you finish; Playwright will stop the applications it started.
 
 The browser tests live in `browser-tests/address-journey.spec.ts`. The successful journey covers
 postcode entry, address selection, identity-document selection, passport guidance, a synthetic
-file upload and its confirmation across the real running applications. The fixture contains only
-four generated JPEG marker bytes and no identity information. Focused tests cover the validation
-variants without repeating the entire browser journey. The tests use labels and roles such as
-`getByLabel` and `getByRole`, matching how a user or assistive technology finds controls. Avoid
-replacing these with CSS selectors tied to the page's visual styling.
+file upload, review and the temporary ready-to-submit page across the real running applications.
+The fixture contains only four generated JPEG marker bytes and no identity information. Focused
+tests cover validation and state-transition variants without repeating the entire browser journey.
+The tests use labels and roles such as `getByLabel` and `getByRole`, matching how a user or assistive
+technology finds controls. Avoid replacing these with CSS selectors tied to visual styling.
 
 ### Investigate a browser-test failure
 

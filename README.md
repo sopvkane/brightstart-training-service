@@ -104,6 +104,10 @@ fictional journey. After reading the guidance, upload a JPEG or PNG image that c
 identity or personal information. The service will confirm that the training API accepted the
 image; it does not verify identity or check whether a document is authentic.
 
+Continue to the check-your-answers page to review the address, document choice and safe upload
+metadata held for the journey. You can change an answer before continuing to the temporary
+ready-to-submit page. Nothing is submitted for a decision yet.
+
 The addresses are fixed training data, so the service never contacts a real address provider. The
 uploaded image is validated in memory and is not placed in production-grade document storage. Use
 only a synthetic image that you created for training.
