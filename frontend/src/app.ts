@@ -8,10 +8,7 @@ import nunjucks from 'nunjucks';
 import { createAddressLookupClient } from './address-api-client.js';
 import { type AddressJourney, AddressJourneyService } from './address-journey-service.js';
 import { addCsrfTokenToViews, protectAgainstCsrf } from './csrf-protection.js';
-import {
-  createDocumentUploadClient,
-  type DocumentUploadClient,
-} from './document-upload-client.js';
+import { createDocumentUploadClient, type DocumentUploadClient } from './document-upload-client.js';
 import { parseDocumentUpload } from './document-upload-parser.js';
 import { createAddressRouter } from './routes/address.js';
 import { beforeYouStartRouter } from './routes/before-you-start.js';

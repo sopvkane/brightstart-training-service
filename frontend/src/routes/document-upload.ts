@@ -1,9 +1,6 @@
 import { Router, type Response } from 'express';
 
-import {
-  DocumentUploadError,
-  type DocumentUploadClient,
-} from '../document-upload-client.js';
+import { DocumentUploadError, type DocumentUploadClient } from '../document-upload-client.js';
 import { maximumDocumentUploadSizeBytes } from '../domain/document-upload.js';
 import { identityDocumentDetails } from '../domain/identity-document.js';
 
@@ -25,8 +22,7 @@ function renderUploadForm(
     uploadInstruction,
     maximumFileSizeMegabytes: maximumDocumentUploadSizeBytes / 1024 / 1024,
     uploadError: errorMessage,
-    errors:
-      errorMessage === undefined ? undefined : [{ text: errorMessage, href: '#document' }],
+    errors: errorMessage === undefined ? undefined : [{ text: errorMessage, href: '#document' }],
   });
 }
 
