@@ -91,11 +91,22 @@ When you open that URL, the browser sends a **request** to the API and receives 
 response is JSON, a text format used to represent structured data. This response tells you that the
 Java application is running.
 
+### 5. Try the service journey
+
+Return to <http://localhost:3000>, select **Start now** and enter one of these training postcodes:
+
+- `BT9 7EP` returns several fictional addresses;
+- `ZZ1 1ZZ` returns one fictional address; or
+- any other postcode returns no addresses.
+
+Choose an address and continue to the confirmation page. The addresses are fixed training data:
+the service never contacts a real address provider.
+
 Stop either application by returning to its terminal and pressing <kbd>Ctrl</kbd>+<kbd>C</kbd>.
 
 ## What have you started?
 
-There are two applications running independently on your laptop:
+There are two applications running on your laptop:
 
 | Application          | What it does                                         | Address                 |
 | -------------------- | ---------------------------------------------------- | ----------------------- |
@@ -103,21 +114,14 @@ There are two applications running independently on your laptop:
 | Java API application | Provides data through URLs that software can request | <http://localhost:8080> |
 
 ```text
-Your browser
-    |
-    v
-Frontend application on localhost:3000
-
-
-Your browser or another program
-    |
-    v
-Java API application on localhost:8080
+Your browser → Frontend application → Java API application
+                  localhost:3000       localhost:8080
 ```
 
-The frontend and API do not currently communicate with each other. This lets you investigate each
-request path separately. Follow [how the service works](docs/how-the-service-works.md) when you want
-to see which files create each response.
+The browser sends page requests and form submissions to the frontend. When an address is needed,
+the frontend asks the Java API for fictional address data. Follow
+[how the service works](docs/how-the-service-works.md) to trace that request through both
+applications.
 
 ## When you are given a ticket
 

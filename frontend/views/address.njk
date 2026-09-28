@@ -18,6 +18,8 @@
   {% endif %}
 
   <form method="post" action="/address" novalidate>
+    <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+
     {{ govukInput({
       label: {
         text: "What is your postcode?",

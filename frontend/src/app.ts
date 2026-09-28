@@ -5,7 +5,9 @@ import express, { type Express } from 'express';
 import session from 'express-session';
 import nunjucks from 'nunjucks';
 
-import { addressRouter } from './routes/address.js';
+import { createAddressLookupClient, type AddressLookupClient } from './address-api-client.js';
+import { addCsrfTokenToViews, protectAgainstCsrf } from './csrf-protection.js';
+import { createAddressRouter } from './routes/address.js';
 import { beforeYouStartRouter } from './routes/before-you-start.js';
 import { homeRouter } from './routes/home.js';
 
@@ -33,10 +35,17 @@ function getSessionSecret(): string {
   return 'brightstart-training-service-local-development-only';
 }
 
-export function createApplication(): Express {
+type ApplicationOptions = {
+  addressLookupClient?: AddressLookupClient;
+};
+
+export function createApplication(options: ApplicationOptions = {}): Express {
   const application = express();
   const frontendDirectory = path.resolve(import.meta.dirname, '..');
   const govukFrontendDistributionDirectory = resolveGovukFrontendDistributionDirectory();
+  const addressLookupClient =
+    options.addressLookupClient ??
+    createAddressLookupClient(process.env.ADDRESS_API_BASE_URL ?? 'http://localhost:8080');
 
   application.disable('x-powered-by');
 
@@ -76,9 +85,12 @@ export function createApplication(): Express {
     );
   });
 
+  application.use(protectAgainstCsrf);
+  application.use(addCsrfTokenToViews);
+
   application.use('/', homeRouter);
   application.use('/before-you-start', beforeYouStartRouter);
-  application.use('/', addressRouter);
+  application.use('/', createAddressRouter(addressLookupClient));
 
   return application;
 }
