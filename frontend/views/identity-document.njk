@@ -1,0 +1,43 @@
+{% extends "layout.njk" %}
+{% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
+{% from "govuk/components/error-summary/macro.njk" import govukErrorSummary %}
+{% from "govuk/components/radios/macro.njk" import govukRadios %}
+
+{% block content %}
+  {{ govukBackLink({
+    text: "Back",
+    href: "/address-confirmed"
+  }) }}
+
+  {% if errors %}
+    {{ govukErrorSummary({
+      titleText: "There is a problem",
+      errorList: errors
+    }) }}
+  {% endif %}
+
+  <form method="post" action="/identity-document" novalidate>
+    <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+
+    {{ govukRadios({
+      name: "identityDocument",
+      idPrefix: "identityDocument",
+      fieldset: {
+        legend: {
+          text: "Which identity document do you have?",
+          classes: "govuk-fieldset__legend--l",
+          isPageHeading: true
+        }
+      },
+      items: documentItems,
+      errorMessage: {
+        text: documentError
+      } if documentError
+    }) }}
+
+    {{ govukButton({
+      text: "Continue"
+    }) }}
+  </form>
+{% endblock %}

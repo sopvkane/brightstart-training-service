@@ -53,9 +53,9 @@ They prove that pages respond successfully, forms validate submitted values, red
 expected location and stored journey state appears on a later page. They assert what a browser
 receives rather than inspecting private Express or session details.
 
-The address-journey test uses a Supertest **agent**, which keeps cookies between requests like one
-browser would. This lets the test submit a postcode, choose an address and request the confirmation
-page with the same session. The setup remains visible in the test:
+The address and identity-document journey tests use a Supertest **agent**, which keeps cookies
+between requests like one browser would. This lets a test submit forms and request later pages with
+the same session. The setup remains visible in the test:
 
 ```typescript
 const browser = request.agent(application);
@@ -79,6 +79,10 @@ npm test --workspace @brightstart/training-frontend -- -t "stores and displays t
 ```
 
 The `-t` option selects tests whose names match the text that follows it.
+
+`identity-document.test.ts` checks the document form, constrained-value validation, redirects,
+stored choice and journey prerequisites. These behaviours belong in frontend tests because this
+step uses only the Express session and does not call the Java API.
 
 ## API tests
 
@@ -162,9 +166,11 @@ npm run test:browser:ui
 Playwright UI mode lets you select one test, run it again and inspect each action. Close the UI when
 you finish; Playwright will stop the applications it started.
 
-The browser tests live in `browser-tests/address-journey.spec.ts`. They use labels and roles such as
-`getByLabel` and `getByRole`, matching how a user or assistive technology finds controls. Avoid
-replacing these with CSS selectors tied to the page's visual styling.
+The browser tests live in `browser-tests/address-journey.spec.ts`. The successful journey covers
+postcode entry, address selection and identity-document selection across the real running
+applications. The tests use labels and roles such as `getByLabel` and `getByRole`, matching how a
+user or assistive technology finds controls. Avoid replacing these with CSS selectors tied to the
+page's visual styling.
 
 ### Investigate a browser-test failure
 
