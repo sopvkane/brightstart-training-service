@@ -70,10 +70,12 @@ identityDocumentRouter.post('/identity-document', (request, response, next) => {
     return;
   }
 
-  request.session.journey = {
-    ...journey,
+  const updatedJourney = {
+    postcode: journey.postcode,
+    selectedAddress: journey.selectedAddress,
     identityDocument: submittedDocument,
   };
+  request.session.journey = updatedJourney;
 
   request.session.save((error) => {
     if (error) {
@@ -98,16 +100,5 @@ identityDocumentRouter.get('/document-guidance', (request, response) => {
   response.render('document-guidance.njk', {
     pageTitle: `${document.guidance.heading} - BrightStart Training Service`,
     guidance: document.guidance,
-  });
-});
-
-identityDocumentRouter.get('/document-ready', (request, response) => {
-  if (request.session.journey?.identityDocument === undefined) {
-    response.redirect('/identity-document');
-    return;
-  }
-
-  response.render('document-ready.njk', {
-    pageTitle: 'Ready for the next step - BrightStart Training Service',
   });
 });
