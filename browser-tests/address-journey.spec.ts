@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test('selects and confirms an address for a postcode', async ({ page }) => {
+test('selects an address and identity document for a postcode', async ({ page }) => {
   await page.goto('/');
 
   await page.getByRole('button', { name: 'Start now' }).click();
@@ -14,6 +14,14 @@ test('selects and confirms an address for a postcode', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Address selected' })).toBeVisible();
   await expect(page.getByText(/2 Pair Programming Place/)).toBeVisible();
   await expect(page.getByText(/BT9 7EP/)).toBeVisible();
+
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('radio', { name: 'Passport' }).check();
+  await page.getByRole('button', { name: 'Continue' }).click();
+
+  await expect(page).toHaveURL('/identity-document-confirmed');
+  await expect(page.getByRole('heading', { name: 'Identity document selected' })).toBeVisible();
+  await expect(page.getByText('You selected Passport.')).toBeVisible();
 });
 
 test('shows an error when the postcode is empty', async ({ page }) => {

@@ -1,5 +1,6 @@
 {% extends "layout.njk" %}
 {% from "govuk/components/back-link/macro.njk" import govukBackLink %}
+{% from "govuk/components/button/macro.njk" import govukButton %}
 
 {% block content %}
   {{ govukBackLink({
@@ -16,4 +17,9 @@
     {{ address.postcode }}
   </p>
   <p class="govuk-body">Your address has been saved for this training journey.</p>
+
+  {{ govukButton({
+    text: "Continue",
+    href: "/identity-document"
+  }) }}
 {% endblock %}

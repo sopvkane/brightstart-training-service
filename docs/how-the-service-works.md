@@ -59,18 +59,23 @@ frontend/
 │   ├── address-api-client.ts     owns HTTP communication with the Java API
 │   ├── csrf-protection.ts        protects forms from forged submissions
 │   ├── domain/address.ts          describes an address inside the frontend
+│   ├── domain/identity-document.ts defines the supported document choices
 │   ├── routes/address.ts         handles postcode and address-selection requests
+│   ├── routes/identity-document.ts handles document selection and confirmation
 │   └── types/express-session.d.ts describes journey state stored in the session
 ├── views/
 │   ├── address.njk               postcode form
 │   ├── select-address.njk        results, selection and validation
 │   ├── address-lookup-error.njk  unavailable-service message
 │   ├── form-expired.njk          rejected-form message
-│   └── address-confirmed.njk     selected-address confirmation
+│   ├── address-confirmed.njk     selected-address confirmation
+│   ├── identity-document.njk     identity-document selection form
+│   └── identity-document-confirmed.njk selected-document confirmation
 └── test/
     ├── address.test.ts                 checks browser-facing HTTP behaviour
     ├── address-journey-service.test.ts checks address-selection decisions
-    └── address-api-client.test.ts      checks the frontend-to-API boundary
+    ├── address-api-client.test.ts      checks the frontend-to-API boundary
+    └── identity-document.test.ts       checks document-selection behaviour
 
 api/src/
 ├── main/java/com/example/brightstart/training/
@@ -109,10 +114,23 @@ A `.ts` file is TypeScript, `.njk` is a Nunjucks template and `.java` is Java.
     only the canonical address whose ID matches the submitted ID.
 11. The route stores that complete address in the session, then a `303` redirect displays it at
     `GET /address-confirmed`.
+12. Continuing sends the browser to `GET /identity-document`. This step is handled entirely by the
+    frontend; it does not call the Java API.
+13. The form submits one of the supported values to `POST /identity-document`. The route rejects
+    missing or unknown values rather than trusting arbitrary form data.
+14. The valid choice is stored alongside the postcode and address in the journey session. A `303`
+    redirect sends the browser to `GET /identity-document-confirmed`.
+15. The confirmation page displays the choice in user-friendly language. It does not claim that a
+    document has been uploaded, checked or verified.
 
 A **session** is state kept on the server for one browser journey. `express-session` gives the
-browser a cookie containing a session identifier; the postcode and address remain in frontend
-memory. Restarting the frontend clears them because this training service has no database.
+browser a cookie containing a session identifier; the postcode, address and identity-document
+choice remain in frontend memory. Restarting the frontend clears them because this training
+service has no database.
+
+The identity-document value is a constrained TypeScript type rather than an arbitrary string. The
+three supported stored values are `passport`, `driving-licence` and `national-identity-card`.
+Friendly labels are used when the choices are displayed to a user.
 
 The default in-memory session store is intentional for local training only. A deployed service
 running more than one frontend instance would need a shared, durable session store so every
@@ -163,6 +181,8 @@ Different outcomes have deliberately different meanings:
 | An unrecognised postcode             | Successful API response with no addresses      |
 | `ZZ9 9ZZ`                            | Deliberate API `503 Service Unavailable`       |
 | Continue without choosing an address | Frontend validation error                      |
+| Continue without choosing a document | Frontend validation error                      |
+| Submit an unknown document value     | Same safe document-selection validation error  |
 | Stop the API before searching        | Frontend displays the unavailable-service page |
 
 The controlled failure is fixed rather than random, so learners and tests can reproduce it. No

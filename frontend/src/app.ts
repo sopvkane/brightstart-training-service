@@ -11,6 +11,7 @@ import { addCsrfTokenToViews, protectAgainstCsrf } from './csrf-protection.js';
 import { createAddressRouter } from './routes/address.js';
 import { beforeYouStartRouter } from './routes/before-you-start.js';
 import { homeRouter } from './routes/home.js';
+import { identityDocumentRouter } from './routes/identity-document.js';
 
 const require = createRequire(import.meta.url);
 
@@ -91,6 +92,7 @@ export function createApplication(options: ApplicationOptions = {}): Express {
   application.use('/', homeRouter);
   application.use('/before-you-start', beforeYouStartRouter);
   application.use('/', createAddressRouter(addressJourney));
+  application.use('/', identityDocumentRouter);
 
   return application;
 }

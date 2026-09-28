@@ -1,10 +1,12 @@
 import 'express-session';
 
 import type { Address } from '../domain/address.js';
+import type { IdentityDocumentType } from '../domain/identity-document.js';
 
 type JourneyState = {
   postcode: string;
   selectedAddress?: Address;
+  identityDocument?: IdentityDocumentType;
 };
 
 declare module 'express-session' {
