@@ -181,8 +181,25 @@ describe('document upload journey', () => {
     expect(confirmationResponse.text).toContain('Document image accepted');
     expect(confirmationResponse.text).toContain('passport');
     expect(confirmationResponse.text).toContain('synthetic-passport.jpg');
+    expect(confirmationResponse.text).toContain('src="/document-image"');
+    expect(confirmationResponse.text).toContain('alt="Uploaded passport image"');
     expect(confirmationResponse.text).toContain('has not been used to verify your identity');
     expect(confirmationResponse.text).toContain('href="/check-your-answers"');
+  });
+
+  it('keeps an accepted upload when the upload form is revisited', async () => {
+    const browser = request.agent(
+      createApplication({ addressJourney, documentUploadClient: clientReturning(receipt) }),
+    );
+    await reachUploadPage(browser);
+    await uploadSyntheticJpeg(browser);
+
+    const response = await browser.get('/upload-document');
+
+    expect(response.status).toBe(200);
+    expect(response.text).toContain('You already uploaded synthetic-passport.jpg');
+    expect(response.text).toContain('href="/document-uploaded"');
+    expect(response.text).toContain('Continue with the uploaded image');
   });
 
   it('handles an invalid successful API response safely', async () => {

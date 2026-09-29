@@ -23,6 +23,13 @@
     <h1 class="govuk-heading-xl">Upload your {{ documentName | lower }}</h1>
     <p class="govuk-body">{{ uploadInstruction }}</p>
 
+    {% if existingUpload %}
+      <div class="govuk-inset-text">
+        You already uploaded {{ existingUpload.fileName }}.
+        Choose another image below only if you want to replace it.
+      </div>
+    {% endif %}
+
     {{ govukFileUpload({
       id: "document",
       name: "document",
@@ -44,4 +51,8 @@
       text: "Upload and continue"
     }) }}
   </form>
+
+  {% if existingUpload %}
+    <p class="govuk-body"><a class="govuk-link" href="/document-uploaded">Continue with the uploaded image</a></p>
+  {% endif %}
 {% endblock %}

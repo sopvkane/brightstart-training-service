@@ -3,6 +3,10 @@
 Getting stuck is normal. An error is evidence about what happened, not proof that you should already
 know the answer.
 
+For a new laptop, begin with the [first-time setup guide](setup.md). Run `npm run doctor` after
+installing the repository dependencies to turn common environment problems into specific next
+steps.
+
 ## Collect useful evidence
 
 Write down:
@@ -66,6 +70,36 @@ npm --version
 
 This repository supports Node.js 22 and npm 10. Install or select those major versions, then run
 `npm ci` again. Do not use `--force` to bypass the check.
+
+Return to [Install Node.js and npm](setup.md#install-nodejs-and-npm) if either major version is
+wrong.
+
+## Repository access or cloning fails
+
+If `git clone` reports that the repository was not found or that access was denied:
+
+1. Open the repository URL in a browser while signed in to GitHub.
+2. Check that you are using the GitHub account your facilitator expects.
+3. Confirm that your invitation to the repository or organisation has been accepted.
+4. Copy the HTTPS URL again from the repository's **Code** menu.
+
+If browser access works but Git still cannot authenticate, follow GitHub's
+[HTTPS credential guidance](https://docs.github.com/en/get-started/git-basics/caching-your-github-credentials-in-git)
+or ask which organisation-managed authentication method to use. Do not put a token in the clone URL
+or save credentials in this repository.
+
+## `npm ci` cannot download dependencies
+
+Read the first npm error rather than only the final `npm error` summary. Check that:
+
+- the terminal has network access;
+- you are in the repository root;
+- Node.js 22 and npm 10 are active; and
+- any organisation-managed npm proxy or registry configuration is available.
+
+Do not change `package-lock.json`, disable certificate checks or use `--force` to bypass the failure.
+Return to [Install repository dependencies](setup.md#install-repository-dependencies), then share the
+first error with your facilitator if the download still fails.
 
 ## `npm ci` says the lockfile is out of date
 
@@ -157,6 +191,8 @@ npm run install:browser
 Then run `npm run test:browser` again. Do not change the test to use an unrelated browser already
 installed on the laptop; using Playwright's expected Chromium version keeps local and CI results
 consistent.
+
+See [Install Playwright Chromium](setup.md#install-playwright-chromium) for its role in the project.
 
 ## Browser tests say a web server is already running
 
@@ -264,3 +300,18 @@ cd ..
 ```
 
 A successful verification finishes with `BUILD SUCCESS`.
+
+## Docker is not running
+
+An error such as `Cannot connect to the Docker daemon` means the Docker command is installed but the
+Docker engine is not available. Start Docker Desktop and wait until it reports that the engine is
+running, then check:
+
+```bash
+docker version
+docker compose version
+```
+
+If either still fails, use your organisation's approved support route or Docker's installation
+guide linked from [Optional: run with Docker](setup.md#optional-run-with-docker). Docker is optional;
+you can continue with the manual two-terminal setup without it.
