@@ -3,9 +3,11 @@ import { describe, expect, it } from 'vitest';
 
 import type { AddressJourney } from '../src/address-journey-service.js';
 import type { DocumentUploadClient } from '../src/document-upload-client.js';
+import type { DocumentImageClient } from '../src/document-image-client.js';
 import { createApplication } from '../src/app.js';
 import type { Address } from '../src/domain/address.js';
 import type { DocumentUploadReceipt } from '../src/domain/document-upload.js';
+import type { SubmissionJourney } from '../src/submission-journey-service.js';
 
 type Browser = ReturnType<typeof request.agent>;
 
@@ -37,6 +39,10 @@ const replacementReceipt: DocumentUploadReceipt = {
   fileName: 'replacement-passport.png',
   contentType: 'image/png',
   size: 8,
+};
+
+const successfulSubmissionJourney: SubmissionJourney = {
+  submit: () => Promise.resolve({ submissionId: 'BST-TRAINING-123', decision: 'ACCEPTED' }),
 };
 
 const addressJourney: AddressJourney = {
@@ -116,6 +122,14 @@ async function completeJourney(browser: Browser): Promise<void> {
   await selectAddress(browser);
   await selectIdentityDocument(browser);
   await uploadDocument(browser);
+}
+
+async function submitJourney(browser: Browser): Promise<request.Response> {
+  const page = await browser.get('/check-your-answers');
+  return browser
+    .post('/check-your-answers')
+    .type('form')
+    .send({ _csrf: readCsrfToken(page.text) });
 }
 
 describe('check your answers journey', () => {
@@ -214,24 +228,166 @@ describe('check your answers journey', () => {
     expect(response.text).not.toContain('synthetic-passport.jpg');
   });
 
-  it('continues to a page that clearly says nothing has been submitted', async () => {
+  it('submits with POST/Redirect/GET and displays the fictional result', async () => {
     const browser = request.agent(
       createApplication({
         addressJourney,
         documentUploadClient: clientReturningReceipts(firstReceipt),
+        submissionJourney: successfulSubmissionJourney,
       }),
     );
     await completeJourney(browser);
 
     const checkAnswersResponse = await browser.get('/check-your-answers');
-    expect(checkAnswersResponse.text).toContain('href="/ready-to-submit"');
+    const csrfToken = readCsrfToken(checkAnswersResponse.text);
+    expect(checkAnswersResponse.text).toContain('Accept and submit');
 
-    const readyResponse = await browser.get('/ready-to-submit');
-    expect(readyResponse.status).toBe(200);
-    expect(readyResponse.text).toContain('Ready to submit');
-    expect(readyResponse.text).toContain('You have reviewed your answers');
-    expect(readyResponse.text).toContain('Nothing has been submitted for a decision');
-    expect(readyResponse.text).not.toContain('identity confirmed');
-    expect(readyResponse.text).not.toContain('decision has been made');
+    const submitResponse = await browser
+      .post('/check-your-answers')
+      .type('form')
+      .send({ _csrf: csrfToken });
+    expect(submitResponse.status).toBe(303);
+    expect(submitResponse.headers.location).toBe('/result');
+
+    const resultResponse = await browser.get('/result');
+    expect(resultResponse.status).toBe(200);
+    expect(resultResponse.text).toContain('Training journey completed');
+    expect(resultResponse.text).toContain('Synthetic result: Accepted');
+    expect(resultResponse.text).toContain('BST-TRAINING-123');
+    expect(resultResponse.text).toContain('1 Apprentice Avenue');
+    expect(resultResponse.text).toContain('Passport');
+    expect(resultResponse.text).toContain('src="/document-image"');
+    expect(resultResponse.text).toContain('No real identity check or government decision');
+  });
+
+  it('reuses a successful session result when Submit is repeated', async () => {
+    let submissionCalls = 0;
+    const submissionJourney: SubmissionJourney = {
+      submit: () => {
+        submissionCalls += 1;
+        return Promise.resolve({ submissionId: 'BST-TRAINING-123', decision: 'ACCEPTED' });
+      },
+    };
+    const browser = request.agent(
+      createApplication({
+        addressJourney,
+        documentUploadClient: clientReturningReceipts(firstReceipt),
+        submissionJourney,
+      }),
+    );
+    await completeJourney(browser);
+
+    await submitJourney(browser);
+    const repeatedResponse = await submitJourney(browser);
+
+    expect(repeatedResponse.status).toBe(303);
+    expect(repeatedResponse.headers.location).toBe('/result');
+    expect(submissionCalls).toBe(1);
+  });
+
+  it('shows a safe error when submission is unavailable', async () => {
+    const browser = request.agent(
+      createApplication({
+        addressJourney,
+        documentUploadClient: clientReturningReceipts(firstReceipt),
+        submissionJourney: { submit: () => Promise.reject(new Error('private failure')) },
+      }),
+    );
+    await completeJourney(browser);
+
+    const response = await submitJourney(browser);
+
+    expect(response.status).toBe(503);
+    expect(response.text).toContain('We could not submit the training journey');
+    expect(response.text).not.toContain('private failure');
+  });
+
+  it('serves the session upload as trusted binary content without accepting an ID', async () => {
+    const requestedUploadIds: string[] = [];
+    const documentImageClient: DocumentImageClient = {
+      getImage: (uploadId) => {
+        requestedUploadIds.push(uploadId);
+        return Promise.resolve({
+          contentType: 'image/png',
+          bytes: new Uint8Array([0x89, 0x50, 0x4e, 0x47]),
+        });
+      },
+    };
+    const browser = request.agent(
+      createApplication({
+        addressJourney,
+        documentUploadClient: clientReturningReceipts(firstReceipt),
+        documentImageClient,
+      }),
+    );
+    await completeJourney(browser);
+
+    const response = await browser.get('/document-image?uploadId=attacker-choice');
+
+    expect(response.status).toBe(200);
+    expect(response.headers['content-type']).toContain('image/png');
+    expect(response.headers['cache-control']).toBe('no-store');
+    expect(requestedUploadIds).toEqual([firstReceipt.uploadId]);
+  });
+
+  it('handles missing document-image state safely', async () => {
+    const response = await request(createApplication()).get('/document-image');
+
+    expect(response.status).toBe(404);
+    expect(response.text).toBe('Document image not found.');
+  });
+
+  it('invalidates a result when the address changes', async () => {
+    const browser = request.agent(
+      createApplication({
+        addressJourney,
+        documentUploadClient: clientReturningReceipts(firstReceipt),
+        submissionJourney: successfulSubmissionJourney,
+      }),
+    );
+    await completeJourney(browser);
+    await submitJourney(browser);
+
+    await submitForm(browser, '/select-address', { addressId: secondAddress.id });
+    const response = await browser.get('/result');
+
+    expect(response.status).toBe(302);
+    expect(response.headers.location).toBe('/check-your-answers');
+  });
+
+  it('invalidates upload and result when the identity document changes', async () => {
+    const browser = request.agent(
+      createApplication({
+        addressJourney,
+        documentUploadClient: clientReturningReceipts(firstReceipt),
+        submissionJourney: successfulSubmissionJourney,
+      }),
+    );
+    await completeJourney(browser);
+    await submitJourney(browser);
+
+    await submitForm(browser, '/identity-document', { identityDocument: 'driving-licence' });
+    const resultResponse = await browser.get('/result');
+
+    expect(resultResponse.status).toBe(302);
+    expect(resultResponse.headers.location).toBe('/upload-document');
+  });
+
+  it('invalidates a result when the upload is replaced', async () => {
+    const browser = request.agent(
+      createApplication({
+        addressJourney,
+        documentUploadClient: clientReturningReceipts(firstReceipt, replacementReceipt),
+        submissionJourney: successfulSubmissionJourney,
+      }),
+    );
+    await completeJourney(browser);
+    await submitJourney(browser);
+
+    await uploadDocument(browser, 'replacement-passport.png');
+    const response = await browser.get('/result');
+
+    expect(response.status).toBe(302);
+    expect(response.headers.location).toBe('/check-your-answers');
   });
 });

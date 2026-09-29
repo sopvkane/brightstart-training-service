@@ -131,6 +131,20 @@ bytes instead of trusting its name or the media type reported by the browser. Us
 training image, never a real identity document. If the API terminal shows an unexpected failure,
 record the first meaningful error before retrying.
 
+## Submission fails or the result image is missing
+
+The frontend journey and the uploaded image live in two different processes. The frontend keeps
+journey metadata in its in-memory session, while the Java API keeps accepted image bytes in its
+in-memory upload store.
+
+Check that both applications are still running. If the Java API was restarted after you uploaded
+the image, it no longer has the bytes referenced by the frontend session. Start again at the upload
+page and upload a new synthetic image. If the frontend was restarted, begin the journey again
+because its session state has been cleared.
+
+This short lifetime is intentional in the local training service. Do not add a database or copy
+image bytes into the frontend session to work around it.
+
 ## Browser tests cannot find Chromium
 
 Playwright needs its own known browser version. Installing the Node.js dependencies does not
@@ -147,8 +161,14 @@ consistent.
 ## Browser tests say a web server is already running
 
 Browser tests start the frontend and Java API automatically, and normally reuse applications that
-you already started locally. If the process on port 3000 or 8080 is not this training service, stop
-it before rerunning the test. The port troubleshooting below explains how the two ports are used.
+you already started locally. An older copy can pass the health check but lack the behaviour in your
+current branch. Stop it, or run the test on unused ports:
+
+```bash
+PLAYWRIGHT_FRONTEND_PORT=3100 PLAYWRIGHT_API_PORT=8180 npm run test:browser
+```
+
+The port troubleshooting below explains how the two normal application ports are used.
 
 ## Port 3000 or 8080 is already in use
 

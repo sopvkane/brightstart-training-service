@@ -33,6 +33,11 @@ flowchart TD
     UploadClient[Document upload client]
     UploadController[Spring upload controller]
     UploadService[Document upload service]
+    UploadStore[In-memory upload store]
+    SubmissionRoute[Express submission route]
+    SubmissionClient[Submission API client]
+    SubmissionController[Spring submission controller]
+    SubmissionService[Submission service]
 
     Browser -->|HTTP: HTML and forms| FrontendRoute
     FrontendRoute --> JourneyService
@@ -44,6 +49,14 @@ flowchart TD
     UploadRoute --> UploadClient
     UploadClient -->|HTTP: multipart form| UploadController
     UploadController --> UploadService
+    UploadService --> UploadStore
+    Browser -->|HTTP: submit form| SubmissionRoute
+    SubmissionRoute --> SubmissionClient
+    SubmissionClient -->|HTTP: REST and JSON| SubmissionController
+    SubmissionController --> SubmissionService
+    SubmissionService --> UploadStore
+    Browser -->|HTTP: image request| SubmissionRoute
+    SubmissionRoute -->|HTTP: binary image| UploadController
 ```
 
 The server-rendered Express frontend is the browser-facing application. The browser exchanges HTTP
@@ -68,15 +81,20 @@ frontend/
 │   ├── csrf-protection.ts        protects forms from forged submissions
 │   ├── document-upload-parser.ts parses one in-memory multipart upload
 │   ├── document-upload-client.ts owns upload HTTP communication with the API
+│   ├── document-image-client.ts owns image-download communication with the API
+│   ├── submission-api-client.ts owns submission HTTP communication with the API
+│   ├── submission-journey-service.ts builds submissions from canonical state
 │   ├── check-answers-view-model.ts derives display-ready review values
 │   ├── domain/address.ts          describes an address inside the frontend
 │   ├── domain/identity-document.ts defines the supported document choices
 │   ├── domain/document-upload.ts describes accepted upload metadata
+│   ├── domain/submission.ts       describes a submission and its result
 │   ├── domain/journey.ts          describes the complete frontend journey state
 │   ├── routes/address.ts         handles postcode and address-selection requests
 │   ├── routes/identity-document.ts handles document selection and guidance
 │   ├── routes/document-upload.ts handles upload and confirmation requests
-│   ├── routes/check-answers.ts   handles review and temporary continuation pages
+│   ├── routes/check-answers.ts   handles the review page
+│   ├── routes/submission.ts      handles submission, result and image requests
 │   └── types/express-session.d.ts describes journey state stored in the session
 ├── views/
 │   ├── address.njk               postcode form
@@ -89,8 +107,9 @@ frontend/
 │   ├── upload-document.njk       image upload form
 │   ├── document-upload-error.njk unavailable-service message
 │   ├── document-uploaded.njk     accepted-upload confirmation
-│   ├── check-your-answers.njk    journey review summary
-│   └── ready-to-submit.njk       temporary continuation page
+│   ├── check-your-answers.njk    journey review and submission form
+│   ├── submission-error.njk      safe submission failure page
+│   └── result.njk                fictional result and uploaded image
 └── test/
     ├── address.test.ts                 checks browser-facing HTTP behaviour
     ├── address-journey-service.test.ts checks address-selection decisions
@@ -116,7 +135,13 @@ api/src/
 │       ├── DocumentUploadController.java handles POST /api/document-uploads
 │       ├── DocumentUploadService.java validates document type, size and content
 │       ├── DocumentUploadReceipt.java describes accepted upload metadata
+│       ├── DocumentUploadStore.java defines the temporary storage boundary
+│       ├── InMemoryDocumentUploadStore.java retains accepted images in memory
 │       └── DocumentUploadExceptionHandler.java produces safe API errors
+│   └── submission/
+│       ├── SubmissionController.java handles POST /api/submissions
+│       ├── SubmissionService.java validates and coordinates submission
+│       └── SubmissionDecisionService.java returns the training-only decision
 └── test/java/com/example/brightstart/training/
     ├── health/HealthControllerTest.java
     ├── address/AddressControllerTest.java
@@ -158,24 +183,35 @@ A `.ts` file is TypeScript, `.njk` is a Nunjucks template and `.java` is Java.
     the selected document type and bytes to the Java API through `document-upload-client.ts`.
 18. `DocumentUploadController` passes the multipart request to `DocumentUploadService`. The service
     checks the document type, size and leading JPEG or PNG bytes rather than trusting the filename
-    or browser-supplied media type.
+    or browser-supplied media type. It saves accepted bytes and trusted metadata through
+    `DocumentUploadStore`.
 19. The API returns a small JSON receipt. The frontend client validates it, and the route stores
-    only that metadata in the journey session.
+    only that metadata in the journey session. The bytes remain in the Java API's in-memory store.
 20. A `303` redirect sends the browser to `GET /document-uploaded`, which confirms that the training
     API accepted the image without claiming that it verified the document or identity.
 21. Continuing sends the browser to `GET /check-your-answers`. The route requires a selected
     address, identity document and upload receipt, then creates a display-ready view model.
 22. `check-your-answers.njk` uses the GOV.UK summary-list component to show the values and accessible
     Change links. It receives the view model rather than the raw Express session.
-23. **Confirm and continue** is a link to `GET /ready-to-submit`. Reviewing answers creates no new
-    state, so the service does not add a meaningless POST merely to justify another redirect.
-24. The temporary page says that the answers were reviewed and nothing has been submitted for a
-    decision. There is no final submission or decision behaviour yet.
+23. **Accept and submit** sends `POST /check-your-answers`. The route ignores browser-supplied copies
+    of journey data and asks `SubmissionJourneyService` to build a submission from server-side
+    canonical state.
+24. `SubmissionApiClient` sends JSON to `POST /api/submissions`. `SubmissionService` validates the
+    request, confirms that the upload exists and that its document type matches, then asks
+    `SubmissionDecisionService` for the deliberately simple `ACCEPTED` training decision.
+25. The frontend validates the response, stores only its reference and decision, then returns a
+    `303` redirect to `GET /result`. Repeating the submit action for that unchanged session reuses
+    the stored result instead of creating another submission.
+26. The result page displays the fictional outcome and requests its image from
+    `GET /document-image`. Express takes the upload ID from session state—not the browser request—
+    and proxies the API's trusted JPEG or PNG bytes from
+    `GET /api/document-uploads/{uploadId}/content`.
 
 A **session** is state kept on the server for one browser journey. `express-session` gives the
-browser a cookie containing a session identifier; the postcode, address, identity-document choice
-and upload receipt remain in frontend memory. Raw file bytes are never placed in the session.
-Restarting the frontend clears its journey state because this training service has no database.
+browser a cookie containing a session identifier; the postcode, address, identity-document choice,
+upload receipt and small submission result remain in frontend memory. Raw file bytes are never
+placed in the session. Restarting the frontend clears its journey state because this training
+service has no database. Restarting the Java API clears the separate in-memory upload store.
 
 The identity-document value is a constrained TypeScript type rather than an arbitrary string. The
 three supported stored values are `passport`, `driving-licence` and `national-identity-card`.
@@ -219,13 +255,14 @@ The state dependencies are deliberately narrow:
 ```text
 postcode → selected address
 identity document → document upload
+selected address + identity document + document upload → submission result
 ```
 
-Changing a postcode invalidates its selected address. Selecting another address does not invalidate
-the identity document or upload because neither depends on the address. Changing the identity
-document invalidates the old upload, while reselecting the same document preserves it. Uploading a
-replacement changes only the receipt. These rules clear state because of a real dependency, not
-simply because one step appears earlier on the screen.
+Changing a postcode invalidates its selected address and any result. Selecting another address
+preserves the identity document and upload but invalidates the result. Changing the identity
+document invalidates the old upload and result, while reselecting the same document preserves them.
+Uploading a replacement invalidates the result. These rules clear state because of a real
+dependency, not simply because one step appears earlier on the screen.
 
 The default in-memory session store is intentional for local training only. A deployed service
 running more than one frontend instance would need a shared, durable session store so every
@@ -288,31 +325,72 @@ A successful response has this shape:
 }
 ```
 
-The receipt contains metadata only. The API validates the bytes in memory and does not keep them in
-a database, filesystem or object store. A real document service would need access controls,
-malware scanning, retention rules and dedicated durable object storage. This training service must
-not be treated as production document storage.
+The receipt contains metadata only. The accepted bytes are kept behind `DocumentUploadStore` for as
+long as the current Java process runs. `GET /api/document-uploads/{uploadId}/content` retrieves them
+using the generated opaque ID and returns the trusted media type with `Cache-Control: no-store`.
+The original filename is display metadata; it is never treated as a filesystem path.
+
+The local store is intentionally an in-memory implementation. A real document service would need
+access controls, malware scanning, retention rules and durable object storage. This training
+service must not be treated as production document storage.
+
+## The submission API contract
+
+The frontend sends `POST /api/submissions` with a small JSON object built from canonical session
+state:
+
+```json
+{
+  "address": {
+    "id": "bt9-7ep-1",
+    "line1": "1 Apprentice Avenue",
+    "line2": "Learning Quarter",
+    "town": "Belfast",
+    "postcode": "BT9 7EP"
+  },
+  "identityDocument": "passport",
+  "documentUploadId": "a generated identifier"
+}
+```
+
+It does not send raw bytes, browser session identifiers or duplicate display labels. The API rejects
+missing fields, unsupported document types, unknown uploads and uploads accepted for a different
+document type. A successful response contains only a generated fictional reference and the
+constrained decision:
+
+```json
+{
+  "submissionId": "BST-generated-reference",
+  "decision": "ACCEPTED"
+}
+```
+
+Every complete valid submission receives `ACCEPTED`. This deterministic rule exists to make the
+request flow observable; it is not identity verification, fraud detection, eligibility assessment
+or government decision-making.
 
 ## Follow a failure
 
 Different outcomes have deliberately different meanings:
 
-| Input or action                      | Result                                         |
-| ------------------------------------ | ---------------------------------------------- |
-| Empty postcode                       | Frontend validation error                      |
-| `BT9 7EP`                            | Three fictional addresses                      |
-| `ZZ1 1ZZ`                            | One fictional address                          |
-| An unrecognised postcode             | Successful API response with no addresses      |
-| `ZZ9 9ZZ`                            | Deliberate API `503 Service Unavailable`       |
-| Continue without choosing an address | Frontend validation error                      |
-| Continue without choosing a document | Frontend validation error                      |
-| Submit an unknown document value     | Same safe document-selection validation error  |
-| Upload no image                      | Frontend validation error                      |
-| Upload more than one image           | Frontend validation error                      |
-| Upload an image larger than 5 MB     | `413 Payload Too Large` with a safe error      |
-| Upload content that is not JPEG/PNG  | `415 Unsupported Media Type` with a safe error |
-| Stop the API before searching        | Frontend displays the unavailable-service page |
-| Stop the API before uploading        | Frontend displays the upload unavailable page  |
+| Input or action                      | Result                                             |
+| ------------------------------------ | -------------------------------------------------- |
+| Empty postcode                       | Frontend validation error                          |
+| `BT9 7EP`                            | Three fictional addresses                          |
+| `ZZ1 1ZZ`                            | One fictional address                              |
+| An unrecognised postcode             | Successful API response with no addresses          |
+| `ZZ9 9ZZ`                            | Deliberate API `503 Service Unavailable`           |
+| Continue without choosing an address | Frontend validation error                          |
+| Continue without choosing a document | Frontend validation error                          |
+| Submit an unknown document value     | Same safe document-selection validation error      |
+| Upload no image                      | Frontend validation error                          |
+| Upload more than one image           | Frontend validation error                          |
+| Upload an image larger than 5 MB     | `413 Payload Too Large` with a safe error          |
+| Upload content that is not JPEG/PNG  | `415 Unsupported Media Type` with a safe error     |
+| Stop the API before searching        | Frontend displays the unavailable-service page     |
+| Stop the API before uploading        | Frontend displays the upload unavailable page      |
+| Stop the API before submitting       | Frontend displays the submission unavailable page  |
+| Restart the API after uploading      | Submission or image request cannot find the upload |
 
 The controlled failure is fixed rather than random, so learners and tests can reproduce it. No
 postcode is sent to an external service and none of these results comes from real address data.
@@ -323,11 +401,12 @@ boundary rather than being displayed to the user.
 
 ## Request the API directly with Bruno
 
-The `bruno` folder contains local requests for health, multiple addresses, one address, no results
-and the controlled failure. Bruno is an API client: it lets you send a request and inspect the raw
-response without going through the frontend. The collection does not include document upload:
-committing a portable image fixture solely for Bruno would duplicate the tiny fixture generated by
-the automated tests, while a machine-specific file path would not work for another learner.
+The `bruno` folder contains local requests for health and each address-lookup outcome. Bruno is an
+API client: it lets you send a request and inspect the raw response without going through the
+frontend. Upload and successful submission requests are not included because a submission must
+reference an upload ID created by the same running API process. A machine-specific upload path or a
+fixed fake ID would make the collection misleading and non-portable; the automated tests cover
+these linked requests instead.
 
 Start the Java API, open the `bruno` folder as a collection in the Bruno application, then run one
 request. Compare its URL, status and JSON with `AddressControllerTest`. The collection contains no
@@ -361,6 +440,13 @@ second multipart request and validates the receipt before it crosses into journe
 upload service owns authoritative content validation. These are separate because each is a real
 boundary where untrusted data changes form, not because every operation needs another layer.
 
+The submission journey service converts complete canonical state into the API contract. The
+submission client owns JSON transport and response validation. The image client handles a different
+binary response, so it remains separate from both JSON and multipart clients. The Java
+`DocumentUploadStore` interface is a justified replaceable boundary: it lets the training-only
+in-memory store later be replaced by suitable object storage without making the current code pretend
+that a database or repository framework exists.
+
 The API controller defines the HTTP contract, the lookup service normalises input and coordinates
 the lookup, and the concrete synthetic source owns the fixed training data. There is no source
 interface or repository abstraction because there is only one in-memory data source and no
@@ -369,8 +455,8 @@ persistent database.
 ## Configuration
 
 The API clients call `http://localhost:8080` by default. Address requests stop waiting after three
-seconds and upload requests after five seconds. Set `ADDRESS_API_BASE_URL` only when the API really
-runs elsewhere. No configuration framework or API key is required.
+seconds; upload, submission and image requests stop after five seconds. Set `ADDRESS_API_BASE_URL`
+only when the API really runs elsewhere. No configuration framework or API key is required.
 
 GOV.UK Frontend supplies accessible components and styles, but the service uses its own generic
 branding. Node module resolution locates the installed package whether npm places it in the

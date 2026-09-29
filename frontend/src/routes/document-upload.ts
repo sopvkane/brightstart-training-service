@@ -103,10 +103,12 @@ export function createDocumentUploadRouter(documentUploadClient: DocumentUploadC
         bytes: uploadedFile.buffer,
       });
 
-      request.session.journey = {
+      const updatedJourney = {
         ...journey,
         documentUpload: receipt,
       };
+      delete updatedJourney.submission;
+      request.session.journey = updatedJourney;
     } catch (error) {
       if (error instanceof DocumentUploadError && error.reason === 'validation') {
         renderUploadForm(
