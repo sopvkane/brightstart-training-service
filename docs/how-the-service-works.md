@@ -188,7 +188,8 @@ A `.ts` file is TypeScript, `.njk` is a Nunjucks template and `.java` is Java.
 19. The API returns a small JSON receipt. The frontend client validates it, and the route stores
     only that metadata in the journey session. The bytes remain in the Java API's in-memory store.
 20. A `303` redirect sends the browser to `GET /document-uploaded`, which confirms that the training
-    API accepted the image without claiming that it verified the document or identity.
+    API accepted the image and displays it through the session-bound `/document-image` route without
+    claiming that it verified the document or identity.
 21. Continuing sends the browser to `GET /check-your-answers`. The route requires a selected
     address, identity document and upload receipt, then creates a display-ready view model.
 22. `check-your-answers.njk` uses the GOV.UK summary-list component to show the values and accessible
@@ -263,6 +264,11 @@ preserves the identity document and upload but invalidates the result. Changing 
 document invalidates the old upload and result, while reselecting the same document preserves them.
 Uploading a replacement invalidates the result. These rules clear state because of a real
 dependency, not simply because one step appears earlier on the screen.
+
+When a learner follows a Change link from check your answers, stored values refill the postcode and
+radio controls. Browsers deliberately do not allow a website to refill a file input. The upload page
+therefore names the accepted file and provides a route to continue with it; choosing a new file is
+an explicit replacement.
 
 The default in-memory session store is intentional for local training only. A deployed service
 running more than one frontend instance would need a shared, durable session store so every

@@ -13,6 +13,7 @@ function renderUploadForm(
   response: Response,
   documentName: string,
   uploadInstruction: string,
+  existingUpload?: { fileName: string },
   status = 200,
   errorMessage?: string,
 ): void {
@@ -21,6 +22,7 @@ function renderUploadForm(
     documentName,
     uploadInstruction,
     maximumFileSizeMegabytes: maximumDocumentUploadSizeBytes / 1024 / 1024,
+    existingUpload,
     uploadError: errorMessage,
     errors: errorMessage === undefined ? undefined : [{ text: errorMessage, href: '#document' }],
   });
@@ -50,7 +52,12 @@ export function createDocumentUploadRouter(documentUploadClient: DocumentUploadC
     }
 
     const document = identityDocumentDetails[identityDocument];
-    renderUploadForm(response, document.label, document.guidance.introduction);
+    renderUploadForm(
+      response,
+      document.label,
+      document.guidance.introduction,
+      request.session.journey?.documentUpload,
+    );
   });
 
   documentUploadRouter.post('/upload-document', async (request, response, next) => {
@@ -77,6 +84,7 @@ export function createDocumentUploadRouter(documentUploadClient: DocumentUploadC
         response,
         document.label,
         document.guidance.introduction,
+        journey.documentUpload,
         status,
         errorMessage,
       );
@@ -90,6 +98,7 @@ export function createDocumentUploadRouter(documentUploadClient: DocumentUploadC
         response,
         document.label,
         document.guidance.introduction,
+        journey.documentUpload,
         400,
         noFileMessage,
       );
@@ -115,6 +124,7 @@ export function createDocumentUploadRouter(documentUploadClient: DocumentUploadC
           response,
           document.label,
           document.guidance.introduction,
+          journey.documentUpload,
           error.status ?? 400,
           validationMessageForStatus(error.status),
         );

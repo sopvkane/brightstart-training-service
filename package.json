@@ -12,8 +12,9 @@
   "scripts": {
     "build:frontend": "npm run build --workspace @brightstart/training-frontend",
     "build:styles:frontend": "npm run build:styles --workspace @brightstart/training-frontend",
-    "check:frontend": "npm run check --workspace @brightstart/training-frontend",
+    "check:frontend": "npm run test:doctor && npm run check --workspace @brightstart/training-frontend",
     "dev:frontend": "npm run dev --workspace @brightstart/training-frontend",
+    "doctor": "node scripts/doctor.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "install:browser": "playwright install chromium",
@@ -22,6 +23,7 @@
     "test:browser:headed": "playwright test --headed --workers=1",
     "test:browser:report": "playwright show-report",
     "test:browser:ui": "playwright test --ui",
+    "test:doctor": "node --test scripts/doctor.test.mjs",
     "test:frontend": "npm run test --workspace @brightstart/training-frontend",
     "typecheck:frontend": "npm run typecheck --workspace @brightstart/training-frontend"
   },

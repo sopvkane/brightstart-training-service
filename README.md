@@ -22,10 +22,20 @@ to learn it.
 ## Start here
 
 The folder containing this project's code, tests and documentation is called a **repository**, or
-**repo**. Open a **terminal** in the main `brightstart-training-service` folder. A terminal is the
-application where you type the commands in this guide.
+**repo**.
 
-### 1. Check your laptop is ready
+### New laptop or first time setting up development tools?
+
+Start with the [first-time setup guide](docs/setup.md). It covers your GitHub account and repository
+access, choosing an editor, installing Git, Node.js and Java, cloning the repository, configuring
+your Git identity, installing dependencies and Playwright, and running both applications.
+
+### Already set up?
+
+Open a **terminal** in the main `brightstart-training-service` folder. A terminal is the application
+where you type the commands in this guide.
+
+Check the tools already installed on your laptop:
 
 Run:
 
@@ -39,7 +49,14 @@ git --version
 You need Node.js 22, npm 10, Java 17 and Git. If a command is missing or shows a different major
 version, use the [setup guide](docs/setup.md) before continuing.
 
-### 2. Install the Node.js dependencies
+If you have already cloned this repository and installed its dependencies, run the repository's
+more complete diagnostic:
+
+```bash
+npm run doctor
+```
+
+### 1. Install the Node.js dependencies
 
 Run this from the main repository folder:
 
@@ -51,7 +68,7 @@ A **dependency** is a package of code or a development tool that this project re
 the project's package files and installs its Node.js dependencies. When the command finishes
 without an error, continue to the next step.
 
-### 3. Start the frontend
+### 2. Start the frontend
 
 The **frontend** is the application that produces the page a user sees in their web browser. Start
 it with:
@@ -66,7 +83,7 @@ BrightStart Training Service page.
 `localhost` means the application is running on your own computer rather than on the internet.
 `3000` is the **port** that identifies this running application.
 
-### 4. Start the Java API application
+### 3. Start the Java API application
 
 An **API** defines how software can request data or behaviour from another piece of software. This
 project has a Java application that exposes an API.
@@ -91,7 +108,7 @@ When you open that URL, the browser sends a **request** to the API and receives 
 response is JSON, a text format used to represent structured data. This response tells you that the
 Java application is running.
 
-### 5. Try the service journey
+### 4. Try the service journey
 
 Return to <http://localhost:3000>, select **Start now** and enter one of these training postcodes:
 

@@ -34,6 +34,15 @@ test('follows the journey from postcode to a synthetic result', async ({ page })
   await expect(page).toHaveURL('/document-uploaded');
   await expect(page.getByRole('heading', { name: 'Document image accepted' })).toBeVisible();
   await expect(page.getByText('synthetic-training-document.png')).toBeVisible();
+  const confirmationImage = page.getByRole('img', { name: 'Uploaded passport image' });
+  await expect(confirmationImage).toBeVisible();
+  await expect
+    .poll(() =>
+      confirmationImage.evaluate(
+        (image: HTMLImageElement) => image.complete && image.naturalWidth > 0,
+      ),
+    )
+    .toBe(true);
   await expect(page.getByText(/has not been used to verify your identity/)).toBeVisible();
 
   await page.getByRole('button', { name: 'Continue' }).click();

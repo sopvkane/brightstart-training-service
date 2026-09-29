@@ -13,3 +13,9 @@
 .app-generic-header {
   border-bottom: govuk-spacing(2) solid govuk-functional-colour(brand);
 }
+
+.app-uploaded-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}

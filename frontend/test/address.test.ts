@@ -59,6 +59,12 @@ async function submitPostcode(browser: Browser, postcode: string) {
 }
 
 describe('postcode and address journey', () => {
+  it('shows the primary training postcode in the hint', async () => {
+    const response = await request(createApplication()).get('/address');
+
+    expect(response.status).toBe(200);
+    expect(response.text).toContain('For example, BT9 7EP');
+  });
   it('displays the postcode form', async () => {
     const application = createApplication();
 
@@ -178,6 +184,27 @@ describe('postcode and address journey', () => {
     expect(response.text).toContain('Select an address');
     expect(response.text).toContain('href="#addressId"');
     expect(response.text).toMatch(/<fieldset[^>]+aria-describedby="[^"]*addressId-error/);
+  });
+
+  it('keeps the stored address selected when a revisited form is submitted empty', async () => {
+    const browser = request.agent(
+      createApplication({ addressJourney: journeyReturning(multipleAddresses) }),
+    );
+    await submitPostcode(browser, 'BT9 7EP');
+    const firstToken = await getCsrfToken(browser, '/select-address');
+    await browser
+      .post('/select-address')
+      .type('form')
+      .send({ _csrf: firstToken, addressId: 'bt9-7ep-2' });
+
+    const secondToken = await getCsrfToken(browser, '/select-address');
+    const response = await browser
+      .post('/select-address')
+      .type('form')
+      .send({ _csrf: secondToken });
+
+    expect(response.status).toBe(400);
+    expect(response.text).toMatch(/<input[^>]+value="bt9-7ep-2"[^>]+checked/);
   });
 
   it('stores and displays the selected address after a 303 redirect', async () => {

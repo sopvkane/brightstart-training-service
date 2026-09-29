@@ -145,7 +145,10 @@ export function createAddressRouter(addressJourney: AddressJourney): Router {
         pageTitle: 'Error: Select your address - BrightStart Training Service',
         postcode,
         addresses: selection.addresses,
-        addressItems: addressRadioItems(selection.addresses, selectedAddressId),
+        addressItems: addressRadioItems(
+          selection.addresses,
+          selectedAddressId || request.session.journey?.selectedAddress?.id,
+        ),
         addressError: addressRequiredMessage,
         errors: [{ text: addressRequiredMessage, href: '#addressId' }],
       });

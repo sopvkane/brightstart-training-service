@@ -1,0 +1,16 @@
+.git
+.github
+.idea
+.vscode
+
+node_modules
+frontend/dist
+frontend/public/application.css
+api/target
+
+playwright-report
+test-results
+
+.env
+*.log
+.DS_Store
