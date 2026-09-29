@@ -102,6 +102,11 @@ state. `submission-api-client.test.ts` checks the JSON contract, malformed respo
 failures and timeout. `document-image-client.test.ts` checks the separate binary response boundary,
 including trusted media types, missing images and unavailable responses.
 
+`configuration.test.ts` checks defaults and deliberately rejects invalid feature-flag values.
+`request-context.test.ts` checks that request IDs are preserved or safely generated, while
+`api-client-request-id.test.ts` checks that every frontend API client forwards the same ID. These
+tests protect the evidence learners use to follow one request through both applications.
+
 ## API tests
 
 From the repository root:
@@ -120,6 +125,9 @@ port 8080. They check:
 - the HTTP status;
 - the media type, which identifies the response format as `application/json`; and
 - the JSON response data.
+
+`RequestLoggingFilterTest` checks the cross-service request-ID boundary separately from controller
+behaviour. The health test also demonstrates the response header a caller receives.
 
 The address controller test includes the real `AddressLookupService` and `SyntheticAddressSource`.
 It therefore checks the HTTP contract, Problem Details failure response and synthetic lookup

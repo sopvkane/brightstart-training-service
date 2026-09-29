@@ -1,3 +1,5 @@
+import { requestIdHeaders } from './request-context.js';
+
 const defaultApiBaseUrl = 'http://localhost:8080';
 const defaultRequestTimeoutMilliseconds = 5_000;
 
@@ -22,7 +24,7 @@ export class DocumentImageError extends Error {
 }
 
 export function createDocumentImageClient(
-  apiBaseUrl = process.env.ADDRESS_API_BASE_URL ?? defaultApiBaseUrl,
+  apiBaseUrl = defaultApiBaseUrl,
   requestTimeoutMilliseconds = defaultRequestTimeoutMilliseconds,
 ): DocumentImageClient {
   return {
@@ -33,7 +35,7 @@ export function createDocumentImageClient(
         response = await fetch(
           new URL(`/api/document-uploads/${encodeURIComponent(uploadId)}/content`, apiBaseUrl),
           {
-            headers: { accept: 'image/jpeg, image/png' },
+            headers: { accept: 'image/jpeg, image/png', ...requestIdHeaders() },
             signal: AbortSignal.timeout(requestTimeoutMilliseconds),
           },
         );

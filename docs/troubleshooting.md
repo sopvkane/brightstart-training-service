@@ -154,6 +154,31 @@ ADDRESS_API_BASE_URL=http://localhost:8081 npm run dev:frontend
 Use the environment-variable syntax for your shell if you are using Windows. Do not change the
 application's default merely to work around an API process that has stopped.
 
+## Follow one request through both applications
+
+1. Reproduce one action, such as looking up `BT9 7EP`.
+2. Find its `method=... path=...` entry in the frontend terminal.
+3. Copy the `requestId` value from that entry.
+4. Search the Java API terminal for the same value.
+5. Compare the two status codes and paths to see where the request stopped succeeding.
+
+If the frontend called an API that is not running, there will be no matching Java entry. That
+absence is useful evidence about the failed boundary. A matching ID connects log entries; it does
+not explain the cause by itself. Continue by reading the status, safe error and relevant code.
+
+Never add request bodies, cookies, CSRF tokens, session secrets or uploaded image bytes to logs
+while investigating.
+
+## Document guidance is not the wording you expected
+
+Check `DOCUMENT_GUIDANCE_V2` in the environment that started the frontend. Its default is `false`,
+and only `true` or `false` are valid. Configuration is read at startup, so stop and restart the
+frontend after changing or removing the variable.
+
+Follow the value from `frontend/src/configuration.ts` into the identity-document route and domain
+mapping. Do not add a query parameter or edit the template until you have identified which guidance
+variant the route supplied.
+
 ## The page says it could not upload your image
 
 The frontend sends the selected training image to the Java API. Check that the API terminal is

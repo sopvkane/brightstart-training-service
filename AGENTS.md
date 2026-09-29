@@ -13,3 +13,7 @@
 - Do not add real Deloitte or client data, code, endpoints or documentation.
 - Do not introduce deferred product features or infrastructure unless the task explicitly requires
   them.
+- Preserve request-ID propagation and keep logs free of bodies, cookies, secrets, tokens and file
+  content.
+- Read feature flags through the central frontend configuration and keep default behaviour healthy.
+- Keep learner scenarios separate from facilitator guidance; neither area is secret when committed.

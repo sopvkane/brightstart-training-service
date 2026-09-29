@@ -169,6 +169,13 @@ Do not begin by changing code immediately.
 
 The complete process is in [CONTRIBUTING.md](CONTRIBUTING.md).
 
+## Training exercises
+
+The default branch is expected to start healthy. Investigation scenarios live in
+[training/](training/README.md), with facilitator guidance kept separately from learner prompts.
+Run the documented baseline checks before beginning so you can distinguish the exercise from an
+existing environment problem.
+
 ## When you get stuck
 
 Getting stuck is normal. You do not need to solve a problem before asking for help. First collect:
