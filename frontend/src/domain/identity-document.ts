@@ -52,6 +52,35 @@ export const identityDocumentDetails = {
 
 export type IdentityDocumentType = keyof typeof identityDocumentDetails;
 
+const alternateGuidance = {
+  passport: {
+    heading: 'Take a clear image of your passport',
+    introduction: 'Use the photo and details page of your passport for this training journey.',
+    requirements: ['Place the passport on a flat surface', 'Keep all four page corners visible'],
+  },
+  'driving-licence': {
+    heading: 'Take a clear image of your driving licence',
+    introduction: 'Use the front of your driving licence for this training journey.',
+    requirements: ['Place the card on a flat surface', 'Keep all four card corners visible'],
+  },
+  'national-identity-card': {
+    heading: 'Take a clear image of your national identity card',
+    introduction: 'Use the front of your identity card for this training journey.',
+    requirements: ['Place the card on a flat surface', 'Keep all four card corners visible'],
+  },
+} as const satisfies Record<IdentityDocumentType, IdentityDocumentDetails['guidance']>;
+
+export function getIdentityDocumentDetails(
+  documentType: IdentityDocumentType,
+  useAlternateGuidance: boolean,
+): IdentityDocumentDetails {
+  const details = identityDocumentDetails[documentType];
+  return {
+    label: details.label,
+    guidance: useAlternateGuidance ? alternateGuidance[documentType] : details.guidance,
+  };
+}
+
 export function isIdentityDocumentType(value: string): value is IdentityDocumentType {
   return Object.hasOwn(identityDocumentDetails, value);
 }

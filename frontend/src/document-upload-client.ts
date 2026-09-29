@@ -3,6 +3,7 @@ import {
   type DocumentUploadReceipt,
 } from './domain/document-upload.js';
 import type { IdentityDocumentType } from './domain/identity-document.js';
+import { requestIdHeaders } from './request-context.js';
 
 const defaultApiBaseUrl = 'http://localhost:8080';
 const defaultRequestTimeoutMilliseconds = 5_000;
@@ -66,7 +67,7 @@ function toDocumentUploadReceipt(value: unknown): DocumentUploadReceipt | undefi
 }
 
 export function createDocumentUploadClient(
-  apiBaseUrl = process.env.ADDRESS_API_BASE_URL ?? defaultApiBaseUrl,
+  apiBaseUrl = defaultApiBaseUrl,
   requestTimeoutMilliseconds = defaultRequestTimeoutMilliseconds,
 ): DocumentUploadClient {
   return {
@@ -85,7 +86,7 @@ export function createDocumentUploadClient(
       try {
         response = await fetch(uploadUrl, {
           method: 'POST',
-          headers: { accept: 'application/json' },
+          headers: { accept: 'application/json', ...requestIdHeaders() },
           body: formData,
           signal: AbortSignal.timeout(requestTimeoutMilliseconds),
         });

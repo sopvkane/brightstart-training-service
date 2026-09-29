@@ -2,6 +2,7 @@ import { Router, type Response } from 'express';
 
 import {
   identityDocumentDetails,
+  getIdentityDocumentDetails,
   isIdentityDocumentType,
   type IdentityDocumentType,
 } from '../domain/identity-document.js';
@@ -33,77 +34,87 @@ function renderDocumentSelection(
   response: Response,
   selectedDocument?: IdentityDocumentType,
   showError = false,
+  returnTo?: string,
 ): void {
   response.status(showError ? 400 : 200).render('identity-document.njk', {
     pageTitle: `${showError ? 'Error: ' : ''}Which identity document do you have? - BrightStart Training Service`,
     documentItems: documentRadioItems(selectedDocument),
     documentError: showError ? documentRequiredMessage : undefined,
     errors: showError ? [{ text: documentRequiredMessage, href: '#identityDocument' }] : undefined,
+    backHref: returnTo === 'document-uploaded' ? '/document-uploaded' : '/address-confirmed',
+    returnTo,
   });
 }
 
-export const identityDocumentRouter = Router();
+export function createIdentityDocumentRouter(useAlternateGuidance: boolean): Router {
+  const identityDocumentRouter = Router();
 
-identityDocumentRouter.get('/identity-document', (request, response) => {
-  const journey = request.session.journey;
+  identityDocumentRouter.get('/identity-document', (request, response) => {
+    const journey = request.session.journey;
 
-  if (journey?.selectedAddress === undefined) {
-    response.redirect('/select-address');
-    return;
-  }
-
-  renderDocumentSelection(response, journey.identityDocument);
-});
-
-identityDocumentRouter.post('/identity-document', (request, response, next) => {
-  const journey = request.session.journey;
-
-  if (journey?.selectedAddress === undefined) {
-    response.redirect('/select-address');
-    return;
-  }
-
-  const submittedDocument = readFormValue(request.body as unknown, 'identityDocument');
-
-  if (!isIdentityDocumentType(submittedDocument)) {
-    renderDocumentSelection(response, journey.identityDocument, true);
-    return;
-  }
-
-  const updatedJourney = {
-    ...journey,
-    identityDocument: submittedDocument,
-  };
-
-  if (journey.identityDocument !== submittedDocument) {
-    delete updatedJourney.documentUpload;
-    delete updatedJourney.submission;
-  }
-
-  request.session.journey = updatedJourney;
-
-  request.session.save((error) => {
-    if (error) {
-      next(error);
+    if (journey?.selectedAddress === undefined) {
+      response.redirect('/select-address');
       return;
     }
 
-    response.redirect(303, '/document-guidance');
+    const returnTo =
+      request.query.returnTo === 'document-uploaded' ? 'document-uploaded' : undefined;
+    renderDocumentSelection(response, journey.identityDocument, false, returnTo);
   });
-});
 
-identityDocumentRouter.get('/document-guidance', (request, response) => {
-  const journey = request.session.journey;
+  identityDocumentRouter.post('/identity-document', (request, response, next) => {
+    const journey = request.session.journey;
 
-  if (journey?.identityDocument === undefined) {
-    response.redirect('/identity-document');
-    return;
-  }
+    if (journey?.selectedAddress === undefined) {
+      response.redirect('/select-address');
+      return;
+    }
 
-  const document = identityDocumentDetails[journey.identityDocument];
+    const submittedDocument = readFormValue(request.body as unknown, 'identityDocument');
+    const returnTo = readFormValue(request.body as unknown, 'returnTo');
 
-  response.render('document-guidance.njk', {
-    pageTitle: `${document.guidance.heading} - BrightStart Training Service`,
-    guidance: document.guidance,
+    if (!isIdentityDocumentType(submittedDocument)) {
+      renderDocumentSelection(response, journey.identityDocument, true, returnTo);
+      return;
+    }
+
+    const updatedJourney = {
+      ...journey,
+      identityDocument: submittedDocument,
+    };
+
+    if (journey.identityDocument !== submittedDocument) {
+      delete updatedJourney.documentUpload;
+      delete updatedJourney.submission;
+    }
+
+    request.session.journey = updatedJourney;
+
+    request.session.save((error) => {
+      if (error) {
+        next(error);
+        return;
+      }
+
+      response.redirect(303, '/document-guidance');
+    });
   });
-});
+
+  identityDocumentRouter.get('/document-guidance', (request, response) => {
+    const journey = request.session.journey;
+
+    if (journey?.identityDocument === undefined) {
+      response.redirect('/identity-document');
+      return;
+    }
+
+    const document = getIdentityDocumentDetails(journey.identityDocument, useAlternateGuidance);
+
+    response.render('document-guidance.njk', {
+      pageTitle: `${document.guidance.heading} - BrightStart Training Service`,
+      guidance: document.guidance,
+    });
+  });
+
+  return identityDocumentRouter;
+}

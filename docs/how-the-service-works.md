@@ -69,6 +69,30 @@ then the frontend uses the JSON response to produce the next HTML page for the b
 The diagram is a map, not a replacement for the code. Follow the numbered steps below when you
 need to understand where a value changes or an error begins.
 
+## Follow one request across both applications
+
+Every browser request receives a request ID. When the frontend calls the Java API during that
+request, it sends the same value in the `X-Request-Id` header:
+
+```text
+Browser request
+requestId=abc123
+      ↓
+Express frontend
+requestId=abc123
+      ↓ X-Request-Id
+Java API
+requestId=abc123
+```
+
+Both terminals log method, path, status and duration with that ID. Search the API terminal for the
+ID copied from the frontend log to connect the two entries. A request ID does not explain a failure;
+it identifies which evidence belongs to the same request.
+
+Logs deliberately omit request bodies, journey state, postcodes, cookies, CSRF tokens, secrets and
+uploaded file content. A safe technical event is useful evidence; copying personal or security data
+into a log is not.
+
 ## Code map
 
 ```text
@@ -460,9 +484,21 @@ persistent database.
 
 ## Configuration
 
-The API clients call `http://localhost:8080` by default. Address requests stop waiting after three
-seconds; upload, submission and image requests stop after five seconds. Set `ADDRESS_API_BASE_URL`
-only when the API really runs elsewhere. No configuration framework or API key is required.
+`frontend/src/configuration.ts` is the single place that reads frontend environment configuration:
+
+| Setting                | Default                 | Purpose                                          |
+| ---------------------- | ----------------------- | ------------------------------------------------ |
+| `PORT`                 | `3000`                  | Frontend listening port                          |
+| `ADDRESS_API_BASE_URL` | `http://localhost:8080` | Java API location                                |
+| `SESSION_SECRET`       | local development value | Signs the session cookie; required in production |
+| `DOCUMENT_GUIDANCE_V2` | `false`                 | Selects alternate document guidance              |
+
+The feature flag accepts only `true` or `false`; an invalid value stops startup with a clear error.
+It is read when the application starts, not stored in a session and not controlled by a browser
+parameter. Restart the frontend after changing it.
+
+Address requests stop waiting after three seconds; upload, submission and image requests stop after
+five seconds. No configuration framework or API key is required.
 
 GOV.UK Frontend supplies accessible components and styles, but the service uses its own generic
 branding. Node module resolution locates the installed package whether npm places it in the

@@ -1,4 +1,5 @@
 import type { Submission, SubmissionResult } from './domain/submission.js';
+import { requestIdHeaders } from './request-context.js';
 
 const defaultApiBaseUrl = 'http://localhost:8080';
 const defaultRequestTimeoutMilliseconds = 5_000;
@@ -31,7 +32,7 @@ function toSubmissionResult(value: unknown): SubmissionResult | undefined {
 }
 
 export function createSubmissionApiClient(
-  apiBaseUrl = process.env.ADDRESS_API_BASE_URL ?? defaultApiBaseUrl,
+  apiBaseUrl = defaultApiBaseUrl,
   requestTimeoutMilliseconds = defaultRequestTimeoutMilliseconds,
 ): SubmissionApiClient {
   return {
@@ -41,7 +42,11 @@ export function createSubmissionApiClient(
       try {
         response = await fetch(new URL('/api/submissions', apiBaseUrl), {
           method: 'POST',
-          headers: { accept: 'application/json', 'content-type': 'application/json' },
+          headers: {
+            accept: 'application/json',
+            'content-type': 'application/json',
+            ...requestIdHeaders(),
+          },
           body: JSON.stringify(submission),
           signal: AbortSignal.timeout(requestTimeoutMilliseconds),
         });

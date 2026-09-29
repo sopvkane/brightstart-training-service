@@ -25,7 +25,8 @@
     "test:browser:ui": "playwright test --ui",
     "test:doctor": "node --test scripts/doctor.test.mjs",
     "test:frontend": "npm run test --workspace @brightstart/training-frontend",
-    "typecheck:frontend": "npm run typecheck --workspace @brightstart/training-frontend"
+    "typecheck:frontend": "npm run typecheck --workspace @brightstart/training-frontend",
+    "verify": "npm run doctor && npm run format:check && npm run check:frontend"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

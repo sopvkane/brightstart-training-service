@@ -1,4 +1,5 @@
 import type { Address } from './domain/address.js';
+import { requestIdHeaders } from './request-context.js';
 
 const defaultAddressApiBaseUrl = 'http://localhost:8080';
 const defaultRequestTimeoutMilliseconds = 3_000;
@@ -54,7 +55,7 @@ function isAddressLookupResponse(value: unknown): value is AddressLookupResponse
 }
 
 export function createAddressLookupClient(
-  apiBaseUrl = process.env.ADDRESS_API_BASE_URL ?? defaultAddressApiBaseUrl,
+  apiBaseUrl = defaultAddressApiBaseUrl,
   requestTimeoutMilliseconds = defaultRequestTimeoutMilliseconds,
 ): AddressLookupClient {
   return {
@@ -66,7 +67,7 @@ export function createAddressLookupClient(
 
       try {
         response = await fetch(lookupUrl, {
-          headers: { accept: 'application/json' },
+          headers: { accept: 'application/json', ...requestIdHeaders() },
           signal: AbortSignal.timeout(requestTimeoutMilliseconds),
         });
       } catch (error) {

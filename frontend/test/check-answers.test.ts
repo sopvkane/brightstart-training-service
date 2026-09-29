@@ -151,11 +151,30 @@ describe('check your answers journey', () => {
     expect(response.text).toContain('synthetic-passport.jpg (JPEG)');
     expect(response.text).not.toContain(firstReceipt.uploadId);
     expect(response.text).toContain('href="/address"');
-    expect(response.text).toContain('href="/identity-document"');
+    expect(response.text).toContain('href="/identity-document?returnTo=document-uploaded"');
     expect(response.text).toContain('href="/upload-document"');
     expect(response.text).toMatch(/Change\s*<span[^>]*> address<\/span>/);
     expect(response.text).toMatch(/Change\s*<span[^>]*> identity document<\/span>/);
     expect(response.text).toMatch(/Change\s*<span[^>]*> uploaded document<\/span>/);
+  });
+
+  it('returns from changing the document type to the page showing the retained image', async () => {
+    const browser = request.agent(
+      createApplication({
+        addressJourney,
+        documentUploadClient: clientReturningReceipts(firstReceipt),
+      }),
+    );
+    await completeJourney(browser);
+
+    const documentPage = await browser.get('/identity-document?returnTo=document-uploaded');
+    const uploadedPage = await browser.get('/document-uploaded');
+
+    expect(documentPage.status).toBe(200);
+    expect(documentPage.text).toContain('href="/document-uploaded"');
+    expect(uploadedPage.status).toBe(200);
+    expect(uploadedPage.text).toContain('synthetic-passport.jpg');
+    expect(uploadedPage.text).toContain('src="/document-image"');
   });
 
   it('redirects to address selection when no address has been selected', async () => {

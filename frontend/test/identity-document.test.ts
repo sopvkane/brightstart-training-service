@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { AddressJourney } from '../src/address-journey-service.js';
 import { createApplication } from '../src/app.js';
+import { loadApplicationConfig } from '../src/configuration.js';
 import type { Address } from '../src/domain/address.js';
 import type { IdentityDocumentType } from '../src/domain/identity-document.js';
 
@@ -152,6 +153,23 @@ describe('identity document and guidance journey', () => {
     expect(guidanceResponse.text).toContain('photo and details page of your passport');
     expect(guidanceResponse.text).toContain('The full page is visible');
     expect(guidanceResponse.text).toContain('href="/upload-document"');
+  });
+
+  it('displays alternate guidance when the feature flag is enabled', async () => {
+    const config = {
+      ...loadApplicationConfig({}),
+      documentGuidanceV2: true,
+    };
+    const browser = request.agent(createApplication({ addressJourney, config }));
+    await reachAddressConfirmation(browser);
+    await selectDocument(browser, 'passport');
+
+    const response = await browser.get('/document-guidance');
+
+    expect(response.status).toBe(200);
+    expect(response.text).toContain('Take a clear image of your passport');
+    expect(response.text).toContain('Place the passport on a flat surface');
+    expect(response.text).not.toContain('Get your passport ready');
   });
 
   it('displays national identity card guidance', async () => {
