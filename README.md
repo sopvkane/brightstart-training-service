@@ -105,12 +105,15 @@ identity or personal information. The service will confirm that the training API
 image; it does not verify identity or check whether a document is authentic.
 
 Continue to the check-your-answers page to review the address, document choice and safe upload
-metadata held for the journey. You can change an answer before continuing to the temporary
-ready-to-submit page. Nothing is submitted for a decision yet.
+metadata held for the journey. You can change an answer or submit the fictional journey. The result
+page shows an `ACCEPTED` synthetic decision, a generated reference and the image you uploaded.
+This outcome is only a predictable training response: no identity check or government decision has
+taken place.
 
 The addresses are fixed training data, so the service never contacts a real address provider. The
-uploaded image is validated in memory and is not placed in production-grade document storage. Use
-only a synthetic image that you created for training.
+uploaded image is validated and held in the Java API's memory; it is not placed in production-grade
+document storage. Restarting the API removes uploaded images, and restarting the frontend removes
+browser journey and result state. Use only a synthetic image that you created for training.
 
 Stop either application by returning to its terminal and pressing <kbd>Ctrl</kbd>+<kbd>C</kbd>.
 

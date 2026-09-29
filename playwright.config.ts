@@ -1,11 +1,16 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const frontendPort = process.env.PLAYWRIGHT_FRONTEND_PORT ?? '3000';
+const apiPort = process.env.PLAYWRIGHT_API_PORT ?? '8080';
+const frontendBaseUrl = `http://127.0.0.1:${frontendPort}`;
+const apiBaseUrl = `http://127.0.0.1:${apiPort}`;
+
 export default defineConfig({
   testDir: './browser-tests',
   workers: 1,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
-    baseURL: 'http://127.0.0.1:3000',
+    baseURL: frontendBaseUrl,
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
   },
@@ -17,17 +22,22 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: './mvnw spring-boot:run',
+      command: `./mvnw spring-boot:run -Dspring-boot.run.arguments=--server.port=${apiPort}`,
       cwd: 'api',
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
-      url: 'http://127.0.0.1:8080/api/health',
+      url: `${apiBaseUrl}/api/health`,
     },
     {
       command: 'npm run dev:frontend',
+      env: {
+        ...process.env,
+        ADDRESS_API_BASE_URL: apiBaseUrl,
+        PORT: frontendPort,
+      },
       reuseExistingServer: !process.env.CI,
       timeout: 30_000,
-      url: 'http://127.0.0.1:3000',
+      url: frontendBaseUrl,
     },
   ],
 });

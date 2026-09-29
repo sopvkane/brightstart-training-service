@@ -35,6 +35,16 @@ function renderLookupFailure(response: Response): void {
   });
 }
 
+function isSameAddress(first: Address | undefined, second: Address): boolean {
+  return (
+    first?.id === second.id &&
+    first.line1 === second.line1 &&
+    first.line2 === second.line2 &&
+    first.town === second.town &&
+    first.postcode === second.postcode
+  );
+}
+
 export function createAddressRouter(addressJourney: AddressJourney): Router {
   const addressRouter = Router();
 
@@ -60,19 +70,17 @@ export function createAddressRouter(addressJourney: AddressJourney): Router {
     }
 
     const currentJourney = request.session.journey;
-    request.session.journey = {
+    const updatedJourney = {
+      ...currentJourney,
       postcode: normalisedPostcode,
-      ...(currentJourney?.postcode === normalisedPostcode &&
-      currentJourney.selectedAddress !== undefined
-        ? { selectedAddress: currentJourney.selectedAddress }
-        : {}),
-      ...(currentJourney?.identityDocument === undefined
-        ? {}
-        : { identityDocument: currentJourney.identityDocument }),
-      ...(currentJourney?.documentUpload === undefined
-        ? {}
-        : { documentUpload: currentJourney.documentUpload }),
     };
+
+    if (currentJourney?.postcode !== normalisedPostcode) {
+      delete updatedJourney.selectedAddress;
+      delete updatedJourney.submission;
+    }
+
+    request.session.journey = updatedJourney;
 
     request.session.save((error) => {
       if (error) {
@@ -144,11 +152,17 @@ export function createAddressRouter(addressJourney: AddressJourney): Router {
       return;
     }
 
-    request.session.journey = {
+    const updatedJourney = {
       ...request.session.journey,
       postcode,
       selectedAddress: selection.selectedAddress,
     };
+
+    if (!isSameAddress(request.session.journey?.selectedAddress, selection.selectedAddress)) {
+      delete updatedJourney.submission;
+    }
+
+    request.session.journey = updatedJourney;
 
     request.session.save((error) => {
       if (error) {

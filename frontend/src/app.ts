@@ -10,12 +10,16 @@ import { type AddressJourney, AddressJourneyService } from './address-journey-se
 import { addCsrfTokenToViews, protectAgainstCsrf } from './csrf-protection.js';
 import { createDocumentUploadClient, type DocumentUploadClient } from './document-upload-client.js';
 import { parseDocumentUpload } from './document-upload-parser.js';
+import { createDocumentImageClient, type DocumentImageClient } from './document-image-client.js';
 import { createAddressRouter } from './routes/address.js';
 import { beforeYouStartRouter } from './routes/before-you-start.js';
 import { createDocumentUploadRouter } from './routes/document-upload.js';
 import { checkAnswersRouter } from './routes/check-answers.js';
 import { homeRouter } from './routes/home.js';
 import { identityDocumentRouter } from './routes/identity-document.js';
+import { createSubmissionRouter } from './routes/submission.js';
+import { createSubmissionApiClient } from './submission-api-client.js';
+import { type SubmissionJourney, SubmissionJourneyService } from './submission-journey-service.js';
 
 const require = createRequire(import.meta.url);
 
@@ -44,6 +48,8 @@ function getSessionSecret(): string {
 type ApplicationOptions = {
   addressJourney?: AddressJourney;
   documentUploadClient?: DocumentUploadClient;
+  documentImageClient?: DocumentImageClient;
+  submissionJourney?: SubmissionJourney;
 };
 
 export function createApplication(options: ApplicationOptions = {}): Express {
@@ -53,6 +59,9 @@ export function createApplication(options: ApplicationOptions = {}): Express {
   const addressJourney =
     options.addressJourney ?? new AddressJourneyService(createAddressLookupClient());
   const documentUploadClient = options.documentUploadClient ?? createDocumentUploadClient();
+  const documentImageClient = options.documentImageClient ?? createDocumentImageClient();
+  const submissionJourney =
+    options.submissionJourney ?? new SubmissionJourneyService(createSubmissionApiClient());
 
   application.disable('x-powered-by');
 
@@ -104,6 +113,7 @@ export function createApplication(options: ApplicationOptions = {}): Express {
   application.use('/', identityDocumentRouter);
   application.use('/', createDocumentUploadRouter(documentUploadClient));
   application.use('/', checkAnswersRouter);
+  application.use('/', createSubmissionRouter(submissionJourney, documentImageClient));
 
   return application;
 }

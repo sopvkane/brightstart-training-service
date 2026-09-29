@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test';
 
-import { syntheticJpeg } from './fixtures/synthetic-document.js';
+import { syntheticPng } from './fixtures/synthetic-document.js';
 
-test('follows the journey from postcode to reviewing the answers', async ({ page }) => {
+test('follows the journey from postcode to a synthetic result', async ({ page }) => {
   await page.goto('/');
 
   await page.getByRole('button', { name: 'Start now' }).click();
@@ -28,12 +28,12 @@ test('follows the journey from postcode to reviewing the answers', async ({ page
   await page.getByRole('button', { name: 'Continue' }).click();
 
   await expect(page).toHaveURL('/upload-document');
-  await page.getByLabel('Choose an image').setInputFiles(syntheticJpeg);
+  await page.getByLabel('Choose an image').setInputFiles(syntheticPng);
   await page.getByRole('button', { name: 'Upload and continue' }).click();
 
   await expect(page).toHaveURL('/document-uploaded');
   await expect(page.getByRole('heading', { name: 'Document image accepted' })).toBeVisible();
-  await expect(page.getByText('synthetic-training-document.jpg')).toBeVisible();
+  await expect(page.getByText('synthetic-training-document.png')).toBeVisible();
   await expect(page.getByText(/has not been used to verify your identity/)).toBeVisible();
 
   await page.getByRole('button', { name: 'Continue' }).click();
@@ -44,13 +44,24 @@ test('follows the journey from postcode to reviewing the answers', async ({ page
     page.getByText(/2 Pair Programming Place, Learning Quarter, Belfast, BT9 7EP/),
   ).toBeVisible();
   await expect(page.getByText('Passport', { exact: true })).toBeVisible();
-  await expect(page.getByText('synthetic-training-document.jpg (JPEG)')).toBeVisible();
+  await expect(page.getByText('synthetic-training-document.png (PNG)')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Confirm and continue' }).click();
+  await page.getByRole('button', { name: 'Accept and submit' }).click();
 
-  await expect(page).toHaveURL('/ready-to-submit');
-  await expect(page.getByRole('heading', { name: 'Ready to submit' })).toBeVisible();
-  await expect(page.getByText('Nothing has been submitted for a decision.')).toBeVisible();
+  await expect(page).toHaveURL('/result');
+  await expect(page.getByRole('heading', { name: 'Training journey completed' })).toBeVisible();
+  await expect(page.getByText('Synthetic result: Accepted')).toBeVisible();
+  await expect(page.getByText(/Submission reference: BST-/)).toBeVisible();
+  await expect(page.getByText(/Identity document: Passport/)).toBeVisible();
+  await expect(page.getByText(/No real identity check or government decision/)).toBeVisible();
+
+  const uploadedImage = page.getByRole('img', { name: 'Uploaded passport image' });
+  await expect(uploadedImage).toBeVisible();
+  await expect
+    .poll(() =>
+      uploadedImage.evaluate((image: HTMLImageElement) => image.complete && image.naturalWidth > 0),
+    )
+    .toBe(true);
 });
 
 test('shows an error when the postcode is empty', async ({ page }) => {

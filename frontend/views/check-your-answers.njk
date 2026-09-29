@@ -49,8 +49,8 @@
     ]
   }) }}
 
-  {{ govukButton({
-    text: "Confirm and continue",
-    href: "/ready-to-submit"
-  }) }}
+  <form method="post" action="/check-your-answers">
+    <input type="hidden" name="_csrf" value="{{ csrfToken }}">
+    {{ govukButton({ text: "Accept and submit" }) }}
+  </form>
 {% endblock %}

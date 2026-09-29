@@ -16,13 +16,18 @@ public class DocumentUploadService {
         (byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A
     };
 
+    private final DocumentUploadStore uploadStore;
+
+    public DocumentUploadService(DocumentUploadStore uploadStore) {
+        this.uploadStore = uploadStore;
+    }
+
     public DocumentUploadReceipt acceptUpload(String documentType, MultipartFile document) {
-        if (!IdentityDocumentType.supports(documentType)) {
-            throw new DocumentUploadException(
-                    HttpStatus.BAD_REQUEST,
-                    "Invalid identity document type",
-                    "Select a supported identity document before uploading an image.");
-        }
+        IdentityDocumentType supportedDocumentType = IdentityDocumentType.fromValue(documentType)
+                .orElseThrow(() -> new DocumentUploadException(
+                        HttpStatus.BAD_REQUEST,
+                        "Invalid identity document type",
+                        "Select a supported identity document before uploading an image."));
 
         if (document == null || document.isEmpty()) {
             throw new DocumentUploadException(
@@ -37,12 +42,24 @@ public class DocumentUploadService {
 
         byte[] content = readContent(document);
         String contentType = detectContentType(content);
+        String uploadId = UUID.randomUUID().toString();
+        String fileName = displayFileName(document.getOriginalFilename());
+
+        uploadStore.save(new StoredDocumentUpload(
+                uploadId, supportedDocumentType, fileName, contentType, content));
 
         return new DocumentUploadReceipt(
-                UUID.randomUUID().toString(),
-                displayFileName(document.getOriginalFilename()),
+                uploadId,
+                fileName,
                 contentType,
                 document.getSize());
+    }
+
+    public StoredDocumentUpload findUpload(String uploadId) {
+        return uploadStore.find(uploadId).orElseThrow(() -> new DocumentUploadException(
+                HttpStatus.NOT_FOUND,
+                "Document upload not found",
+                "The document upload could not be found."));
     }
 
     private byte[] readContent(MultipartFile document) {

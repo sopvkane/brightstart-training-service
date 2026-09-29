@@ -92,8 +92,15 @@ multipart field names, receipt validation, controlled API responses, network fai
 
 `check-answers-view-model.test.ts` checks the meaningful transformation from canonical state to
 display text. `check-answers.test.ts` checks the rendered summary, prerequisite redirects and the
-state transitions behind Change actions. Keeping those combinations at the route layer makes a
-failure easier to locate than repeating every state transition through the full browser journey.
+state transitions behind Change actions. It also checks submission, duplicate-submit protection,
+the result page and the session-bound image route. Keeping those combinations at the route layer
+makes a failure easier to locate than repeating every state transition through the full browser
+journey.
+
+`submission-journey-service.test.ts` proves that the submission is built from canonical journey
+state. `submission-api-client.test.ts` checks the JSON contract, malformed responses, network
+failures and timeout. `document-image-client.test.ts` checks the separate binary response boundary,
+including trusted media types, missing images and unavailable responses.
 
 ## API tests
 
@@ -105,7 +112,8 @@ cd api
 cd ..
 ```
 
-`HealthControllerTest`, `AddressControllerTest` and `DocumentUploadControllerTest` use MockMvc,
+`HealthControllerTest`, `AddressControllerTest`, `DocumentUploadControllerTest` and
+`SubmissionControllerTest` use MockMvc,
 Spring's tool for sending a request through Spring MVC during a test without starting the API on
 port 8080. They check:
 
@@ -119,7 +127,15 @@ behaviour together without duplicating the fixed examples in another Java test.
 
 The document-upload controller test builds very small byte arrays with recognisable JPEG and PNG
 signatures. It checks the successful receipt plus missing, empty, oversized, unsupported and invalid
-document-type requests. A declared filename or media type does not make unsupported bytes valid.
+document-type requests. It also retrieves accepted bytes and checks trusted content types, missing
+uploads and no-store caching. A declared filename or media type does not make unsupported bytes
+valid. `InMemoryDocumentUploadStoreTest` checks that the storage boundary makes a defensive copy of
+mutable file bytes.
+
+The submission controller test first stores a synthetic upload, then submits JSON that references
+it. It checks the successful contract and rejects malformed submissions, unsupported document
+types, missing upload IDs and document-type mismatches. This keeps the relationship between upload
+and submission visible in the test setup.
 
 ### Test the boundary without starting both applications
 
@@ -162,6 +178,16 @@ npm run test:browser
 This runs Chromium without opening a visible window. Use this mode for a quick complete check and
 in continuous integration.
 
+By default, Playwright reuses this training service if it is already running on ports 3000 and 8080. If those ports contain an older build or another application, use unused test ports so that
+Playwright starts the code in your current branch:
+
+```bash
+PLAYWRIGHT_FRONTEND_PORT=3100 PLAYWRIGHT_API_PORT=8180 npm run test:browser
+```
+
+On Windows PowerShell, set the two environment variables before running the command. A health check
+can only prove that an API is running; it cannot prove that the process contains your latest code.
+
 ### Watch the tests use the service
 
 Run the browser visibly and watch each journey happen:
@@ -184,8 +210,8 @@ you finish; Playwright will stop the applications it started.
 
 The browser tests live in `browser-tests/address-journey.spec.ts`. The successful journey covers
 postcode entry, address selection, identity-document selection, passport guidance, a synthetic
-file upload, review and the temporary ready-to-submit page across the real running applications.
-The fixture contains only four generated JPEG marker bytes and no identity information. Focused
+file upload, review, submission, synthetic result and displayed image across the real running
+applications. The fixture is a generated one-pixel PNG containing no identity information. Focused
 tests cover validation and state-transition variants without repeating the entire browser journey.
 The tests use labels and roles such as `getByLabel` and `getByRole`, matching how a user or assistive
 technology finds controls. Avoid replacing these with CSS selectors tied to visual styling.

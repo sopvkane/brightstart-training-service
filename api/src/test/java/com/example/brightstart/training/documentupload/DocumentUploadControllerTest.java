@@ -8,13 +8,19 @@ import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(DocumentUploadController.class)
-@Import({DocumentUploadService.class, DocumentUploadExceptionHandler.class})
+@Import({
+    DocumentUploadService.class,
+    DocumentUploadExceptionHandler.class,
+    InMemoryDocumentUploadStore.class
+})
 class DocumentUploadControllerTest {
 
     private static final byte[] JPEG_CONTENT = {
@@ -26,6 +32,9 @@ class DocumentUploadControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private DocumentUploadStore uploadStore;
 
     @Test
     void acceptsAJpegUsingItsContentSignature() throws Exception {
@@ -118,5 +127,44 @@ class DocumentUploadControllerTest {
                         .param("documentType", "library-card"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.title").value("Invalid identity document type"));
+    }
+
+    @Test
+    void returnsStoredJpegContentWithoutCaching() throws Exception {
+        uploadStore.save(new StoredDocumentUpload(
+                "stored-jpeg",
+                IdentityDocumentType.PASSPORT,
+                "passport.jpg",
+                "image/jpeg",
+                JPEG_CONTENT));
+
+        mockMvc.perform(get("/api/document-uploads/stored-jpeg/content"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("image/jpeg"))
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(content().bytes(JPEG_CONTENT));
+    }
+
+    @Test
+    void returnsStoredPngContent() throws Exception {
+        uploadStore.save(new StoredDocumentUpload(
+                "stored-png",
+                IdentityDocumentType.DRIVING_LICENCE,
+                "licence.png",
+                "image/png",
+                PNG_CONTENT));
+
+        mockMvc.perform(get("/api/document-uploads/stored-png/content"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("image/png"))
+                .andExpect(content().bytes(PNG_CONTENT));
+    }
+
+    @Test
+    void reportsAnUnknownUploadAsNotFound() throws Exception {
+        mockMvc.perform(get("/api/document-uploads/unknown/content"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_PROBLEM_JSON))
+                .andExpect(jsonPath("$.title").value("Document upload not found"));
     }
 }

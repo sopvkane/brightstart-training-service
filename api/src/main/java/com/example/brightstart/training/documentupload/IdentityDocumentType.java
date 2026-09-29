@@ -1,6 +1,7 @@
 package com.example.brightstart.training.documentupload;
 
 import java.util.Arrays;
+import java.util.Optional;
 
 public enum IdentityDocumentType {
     PASSPORT("passport"),
@@ -13,7 +14,7 @@ public enum IdentityDocumentType {
         this.value = value;
     }
 
-    public static boolean supports(String submittedValue) {
-        return Arrays.stream(values()).anyMatch(type -> type.value.equals(submittedValue));
+    public static Optional<IdentityDocumentType> fromValue(String submittedValue) {
+        return Arrays.stream(values()).filter(type -> type.value.equals(submittedValue)).findFirst();
     }
 }

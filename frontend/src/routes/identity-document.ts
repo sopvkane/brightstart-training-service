@@ -77,6 +77,7 @@ identityDocumentRouter.post('/identity-document', (request, response, next) => {
 
   if (journey.identityDocument !== submittedDocument) {
     delete updatedJourney.documentUpload;
+    delete updatedJourney.submission;
   }
 
   request.session.journey = updatedJourney;
