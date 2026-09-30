@@ -37,6 +37,16 @@ describe('GET /', () => {
     );
   });
 
+  it('shows the full service name in a header that links to the start page', async () => {
+    const application = createApplication();
+
+    const response = await request(application).get('/');
+
+    expect(response.text).toMatch(
+      /<a href="\/" class="govuk-generic-header__homepage-link">\s*BrightStart Training Service\s*<\/a>/,
+    );
+  });
+
   it('provides the accessible page shell', async () => {
     const application = createApplication();
 
