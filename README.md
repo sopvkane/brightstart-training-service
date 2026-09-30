@@ -1,6 +1,6 @@
 # BrightStart Training Service
 
-Welcome to the BrightStart Training Service.
+Welcome to the BrightStart Training Service Repo.
 
 This is a small practice application that you can run and change on your own laptop. You will use
 it in the same way you would use a real project at work:
