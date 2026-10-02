@@ -140,6 +140,30 @@ describe('postcode and address journey', () => {
     expect(response.text).toContain('name="addressId"');
   });
 
+  it('renders new single returned address', async () => {
+    const oneAddress: Address[] = [
+      {
+        id: 'zz2-2zz-1',
+        line1: '4 Backend Boulevard',
+        line2: 'Service Quarter',
+        town: 'Exampleton',
+        postcode: 'ZZ2 2ZZ',
+      },
+      //Only added first adress, as the second one is formatted the same, so should prove both work well.
+    ];
+    const browser = request.agent(
+      createApplication({ addressJourney: journeyReturning(oneAddress) }),
+    );
+    await submitPostcode(browser, 'ZZ2 2ZZ');
+
+    const response = await browser.get('/select-address');
+
+    expect(response.status).toBe(200);
+    expect(response.text).toContain('4 Backend Boulevard');
+    expect(response.text).toContain('Exampleton');
+    expect(response.text).toContain('name="addressId"');
+  });
+
   it('explains when no addresses are returned', async () => {
     const browser = request.agent(createApplication({ addressJourney: journeyReturning([]) }));
     await submitPostcode(browser, 'AA1 1AA');
