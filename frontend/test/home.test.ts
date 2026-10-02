@@ -58,4 +58,14 @@ describe('GET /', () => {
     expect(scriptResponse.status).toBe(200);
     expect(scriptResponse.headers['content-type']).toMatch(/^text\/javascript/);
   });
+  it('uses the teal BrightStart theme colour', async () => {
+  // Arrange
+  const application = createApplication();
+  // Act
+  const response = await request(application).get('/');
+  // Assert
+  expect(response.text).toMatch(
+    /<meta name="theme-color" content="#006d77">/i,
+  );
+});
 });
