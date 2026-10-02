@@ -18,7 +18,9 @@ describe('GET /', () => {
 
     const response = await request(application).get('/');
 
-    expect(response.text).toMatch(/<h1[^>]*>BrightStart Training Service Repo<\/h1>/);
+    expect(response.text).toMatch(/<h1[^>]*>Start the BrightStart training journey<\/h1>/);
+    // Changed test criteria to match change to wording in home.njk where it was made more welcoming
+    
     expect(response.text).toContain(
       'confirm your details and identity before accessing a fictional government',
     );
