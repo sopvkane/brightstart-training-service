@@ -56,4 +56,21 @@ class AddressControllerTest {
                         .value("Address lookup is temporarily unavailable. Try again later."))
                 .andExpect(jsonPath("$.instance").value("/api/addresses"));
     }
+    @Test
+    void returnsTwoFictionalAddressesForZz2Postcode() throws Exception {
+        mockMvc.perform(get("/api/addresses").param("postcode", "zz2 2zz"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.addresses.length()").value(2))
+                .andExpect(jsonPath("$.addresses[0].id").value("zz2-2zz-1"))
+                .andExpect(jsonPath("$.addresses[0].line1").value("4 Backend Boulevard"))
+                .andExpect(jsonPath("$.addresses[0].line2").value("Service Quarter"))
+                .andExpect(jsonPath("$.addresses[0].town").value("Exampleton"))
+                .andExpect(jsonPath("$.addresses[0].postcode").value("ZZ2 2ZZ"))
+                .andExpect(jsonPath("$.addresses[1].id").value("zz2-2zz-2"))
+                .andExpect(jsonPath("$.addresses[1].line1").value("5 API Avenue"))
+                .andExpect(jsonPath("$.addresses[1].line2").value("Service Quarter"))
+                .andExpect(jsonPath("$.addresses[1].town").value("Exampleton"))
+                .andExpect(jsonPath("$.addresses[1].postcode").value("ZZ2 2ZZ"));
+    }
 }
