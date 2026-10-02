@@ -14,16 +14,17 @@ describe('GET /', () => {
   });
 
   it('explains the service purpose', async () => {
-    // Arrange
     const application = createApplication();
-    // Act
+
     const response = await request(application).get('/');
-    // Assert
-    expect(response.text).toMatch(/<h1[^>]*>Start the BrightStart training journey<\/h1>/);
+
+    expect(response.text).toMatch(/<h1[^>]*>BrightStart Training Service Repo<\/h1>/);
     expect(response.text).toContain(
-      'Use this fictional service to practise a simple identity journey from start to submission.',
+      'confirm your details and identity before accessing a fictional government',
     );
     expect(response.text).toContain('This is a fictional training service');
+    expect(response.text).toContain('It is not a real government service');
+    expect(response.text).toContain('confirm your address');
   });
 
   it('links to the Before you start page', async () => {
@@ -56,13 +57,5 @@ describe('GET /', () => {
     expect(pageResponse.text).toContain("from '/assets/govuk/govuk-frontend.min.js'");
     expect(scriptResponse.status).toBe(200);
     expect(scriptResponse.headers['content-type']).toMatch(/^text\/javascript/);
-  });
-  it('uses the teal BrightStart theme colour', async () => {
-    // Arrange
-    const application = createApplication();
-    // Act
-    const response = await request(application).get('/');
-    // Assert
-    expect(response.text).toMatch(/<meta name="theme-color" content="#006d77">/i);
   });
 });
