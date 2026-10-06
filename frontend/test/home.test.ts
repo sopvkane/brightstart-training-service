@@ -14,8 +14,9 @@ describe('GET /', () => {
   });
 
   it('explains the service purpose', async () => {
+    // Arrange
     const application = createApplication();
-
+    // Act
     const response = await request(application).get('/');
 
     expect(response.text).toMatch(/<h1[^>]*>Start the Brightstart training journey<\/h1>/);
