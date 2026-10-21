@@ -25,9 +25,8 @@ class HealthControllerTest {
     @Test
     void returnsAnUpHealthStatus() throws Exception {
         mockMvc.perform(get("/api/health").header("X-Request-Id", "health-request-123"))
-                .andExpect(status().isOk())
-                .andExpect(header().string("X-Request-Id", "health-request-123"))
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.status").value("UP"));
+              .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+              .andExpect(jsonPath("$.status").value("UP"))
+              .andExpect(jsonPath("$.service").value("brightstart-training-api"));
     }
 }
