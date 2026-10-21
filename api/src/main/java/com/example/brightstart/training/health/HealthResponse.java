@@ -1,4 +1,6 @@
 package com.example.brightstart.training.health;
 
-public record HealthResponse(String status) {
+public record HealthResponse(String status,
+                            String service) {
+
 }

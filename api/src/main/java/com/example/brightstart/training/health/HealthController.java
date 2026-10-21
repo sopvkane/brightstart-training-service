@@ -10,6 +10,6 @@ public class HealthController {
 
     @GetMapping
     public HealthResponse getHealth() {
-        return new HealthResponse("UP");
+                return new HealthResponse("UP", "brightstart-training-api");
     }
 }
