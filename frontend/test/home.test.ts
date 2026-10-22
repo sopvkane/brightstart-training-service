@@ -14,17 +14,19 @@ describe('GET /', () => {
   });
 
   it('explains the service purpose', async () => {
-    // Arrange
-    const application = createApplication();
-    // Act
-    const response = await request(application).get('/');
-    // Assert
-    expect(response.text).toMatch(/<h1[^>]*>Start the BrightStart training journey<\/h1>/);
-    expect(response.text).toContain(
-      'Use this fictional service to practise a simple identity journey from start to submission.',
-    );
-    expect(response.text).toContain('This is a fictional training service');
-  });
+  // Arrange
+  const application = createApplication();
+  // Act
+  const response = await request(application).get('/');
+  // Assert
+  expect(response.text).toMatch(
+    /<h1[^>]*>Start the BrightStart training journey<\/h1>/,
+  );
+  expect(response.text).toContain(
+    'Use this fictional service to practise a simple identity journey from start to submission.',
+  );
+  expect(response.text).toContain('This is a fictional training service');
+});
 
   it('links to the Before you start page', async () => {
     const application = createApplication();
