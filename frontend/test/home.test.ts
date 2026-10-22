@@ -18,12 +18,13 @@ describe('GET /', () => {
     const application = createApplication();
     // Act
     const response = await request(application).get('/');
-    // Assert
-    expect(response.text).toMatch(/<h1[^>]*>Start the BrightStart training journey<\/h1>/);
+
+    expect(response.text).toMatch(/<h1[^>]*>Start the Brightstart training journey<\/h1>/);
     expect(response.text).toContain(
-      'Use this fictional service to practise a simple identity journey from start to submission.',
+      'Use this fictional service to practise a simple identity journey from start to submission',
     );
     expect(response.text).toContain('This is a fictional training service');
+
   });
 
   it('links to the Before you start page', async () => {
@@ -57,12 +58,18 @@ describe('GET /', () => {
     expect(scriptResponse.status).toBe(200);
     expect(scriptResponse.headers['content-type']).toMatch(/^text\/javascript/);
   });
-  it('uses the teal BrightStart theme colour', async () => {
-    // Arrange
+  it("uses the teal Brightstart theme colour", async () => {
+    // arrange
     const application = createApplication();
-    // Act
-    const response = await request(application).get('/');
-    // Assert
-    expect(response.text).toMatch(/<meta name="theme-color" content="#006d77">/i);
+
+    //act
+    const response = await request(application).get("/");
+
+
+    //assert
+    expect(response.text).toMatch(
+      /<meta name="theme=color" content="#006d77">/i,
+    );
   });
 });
+
