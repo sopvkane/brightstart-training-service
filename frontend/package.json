@@ -21,7 +21,7 @@
     "express": "5.2.1",
     "express-session": "1.19.0",
     "govuk-frontend": "6.5.1",
-    "multer": "2.4.0",
+    "multer": "2.5.0",
     "nunjucks": "3.2.4"
   },
   "devDependencies": {
