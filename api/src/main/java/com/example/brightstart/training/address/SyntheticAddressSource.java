@@ -28,6 +28,20 @@ public class SyntheticAddressSource {
                             "Learning Quarter",
                             "Belfast",
                             "BT9 7EP"));
+        case "ZZ2 2ZZ" -> List.of(
+                new Address(
+                        "zz2-2zz-1",
+                        "4 Backend Boulevard",
+                        "Service Quarter",
+                        "Exampleton",
+                        "ZZ2 2ZZ"),
+                new Address(
+                        "zz2-2zz-2",
+                        "5 API Avenue",
+                        "Service Quarter",
+                        "Exampleton",
+                        "ZZ2 2ZZ"));
+                        
             case "ZZ1 1ZZ" -> List.of(
                     new Address("zz1-1zz-1", "1 Learning Lane", "", "Exampleton", "ZZ1 1ZZ"));
             case "ZZ9 9ZZ" -> throw new AddressLookupUnavailableException();
